@@ -42,20 +42,19 @@
   </header>
 
   <main class="wrap">
-    <!-- ============ 1) TAMAÑO Y SABOR (REEMPLAZO) ============ -->
+    <!-- ============ 1) TAMAÑO, MARCO Y SABOR (REEMPLAZO) ============ -->
 <section id="step1" class="card" style="margin-top:8px">
-  <h2>1) Tamaño y sabor</h2>
+  <h2>1) Tamaño, marco y sabor</h2>
 
   <div class="note" style="margin:-6px 0 12px">
-    Selecciona el tamaño (porciones/diámetro/capas) y el sabor del bizcocho. Puedes marcar necesidades dietarias.
+    Selecciona el tamaño (porciones/diámetro/capas), el <b>marco</b> (masa/base: sin azúcar, sin gluten, integral, etc.) y el sabor del bizcocho.
   </div>
 
-  <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
     <!-- Tamaño -->
     <div>
       <label for="size">Tamaño</label>
       <select id="size" name="size">
-        <!-- value = código interno -->
         <option value="T12" data-porciones="12" data-diametro="18 cm" data-capas="2">12 porciones · Ø18 cm · 2 capas</option>
         <option value="T16" data-porciones="16" data-diametro="22 cm" data-capas="2">16 porciones · Ø22 cm · 2 capas</option>
         <option value="T20" data-porciones="20" data-diametro="24 cm" data-capas="3">20 porciones · Ø24 cm · 3 capas</option>
@@ -63,6 +62,21 @@
         <option value="T30" data-porciones="30" data-diametro="30 cm" data-capas="3">30 porciones · Ø30 cm · 3 capas</option>
       </select>
       <p class="note" id="sizeMeta" style="margin:.35rem 0 0"></p>
+    </div>
+
+    <!-- Marco / Base dietaria -->
+    <div>
+      <label for="base">Marco (masa/base)</label>
+      <select id="base" name="base">
+        <option value="TRD" data-delta="0">Tradicional</option>
+        <option value="SAZ" data-delta="1500">Sin azúcar (+$1.500)</option>
+        <option value="SGL" data-delta="2000">Sin gluten (+$2.000)</option>
+        <option value="INT" data-delta="1000">Integral (+$1.000)</option>
+        <option value="ISG" data-delta="2500">Integral sin gluten (+$2.500)</option>
+        <option value="VEG" data-delta="1500">Vegano (+$1.500)</option>
+        <option value="VGS" data-delta="3000">Vegano sin gluten (+$3.000)</option>
+      </select>
+      <p class="note" style="margin:.35rem 0 0">El <b>marco</b> define la masa/base y restricciones dietarias.</p>
     </div>
 
     <!-- Sabor bizcocho -->
@@ -75,19 +89,8 @@
         <option value="ZAN" data-delta="1500">Zanahoria (+$1.500)</option>
         <option value="LIM" data-delta="1000">Limón (+$1.000)</option>
       </select>
-      <p class="note" style="margin:.35rem 0 0">El ajuste de precio del sabor se suma al precio base del tamaño.</p>
+      <p class="note" style="margin:.35rem 0 0">Este ajuste se suma al precio del tamaño y del marco.</p>
     </div>
-  </div>
-
-  <!-- Necesidades dietarias -->
-  <div style="margin-top:12px">
-    <label>Necesidades dietarias (opcional)</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <label class="pill"><input type="checkbox" id="tag_veg"  style="margin-right:6px"> Vegano</label>
-      <label class="pill"><input type="checkbox" id="tag_saz"  style="margin-right:6px"> Sin azúcar</label>
-      <label class="pill"><input type="checkbox" id="tag_sgl"  style="margin-right:6px"> Sin gluten</label>
-    </div>
-    <p class="note" style="margin:.35rem 0 0">Si marcas una o más, filtraremos rellenos/coberturas compatibles en los pasos siguientes.</p>
   </div>
 
   <!-- Resumen dinámico -->
@@ -104,70 +107,68 @@
     </div>
   </div>
 </section>
-
+    
     <script>
-/* ====== Lógica básica del paso 1: precio y SKU ====== */
+/* ====== Lógica básica del paso 1 (con MARCO) ====== */
 (function(){
   // Precios base por tamaño (CLP)
-  const SIZE_BASE = {
-    T12: 15990,
-    T16: 18990,
-    T20: 22990,
-    T24: 25990,
-    T30: 31990
-  };
+  const SIZE_BASE = { T12:15990, T16:18990, T20:22990, T24:25990, T30:31990 };
 
-  const $size   = document.getElementById('size');
-  const $flavor = document.getElementById('flavor');
+  const $size     = document.getElementById('size');
+  const $base     = document.getElementById('base');
+  const $flavor   = document.getElementById('flavor');
   const $sizeMeta = document.getElementById('sizeMeta');
-  const $price = document.getElementById('pricePreview');
-  const $sku   = document.getElementById('skuPreview');
+  const $price    = document.getElementById('pricePreview');
+  const $sku      = document.getElementById('skuPreview');
 
-  function money(n){
-    return n.toLocaleString('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0});
-  }
+  function money(n){ return n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
 
   function updateMeta(){
     const opt = $size.selectedOptions[0];
-    const p = opt.dataset.porciones, d = opt.dataset.diametro, c = opt.dataset.capas;
-    $sizeMeta.textContent = `${p} porciones · ${d} · ${c} capas`;
+    $sizeMeta.textContent = `${opt.dataset.porciones} porciones · ${opt.dataset.diametro} · ${opt.dataset.capas} capas`;
   }
 
   function updateSummary(){
-    const sizeCode = $size.value;
-    const flavorOpt = $flavor.selectedOptions[0];
-    const flavorCode = flavorOpt.value;
-    const delta = Number(flavorOpt.dataset.delta || 0);
+    const sizeCode   = $size.value;
+    const baseOpt    = $base.selectedOptions[0];
+    const flavorOpt  = $flavor.selectedOptions[0];
 
-    // Precio
-    const base = SIZE_BASE[sizeCode] || 0;
-    const total = base + delta;
+    const baseDelta   = Number(baseOpt.dataset.delta || 0);
+    const flavorDelta = Number(flavorOpt.dataset.delta || 0);
+
+    const basePrice = SIZE_BASE[sizeCode] || 0;
+    const total     = basePrice + baseDelta + flavorDelta;
+
     $price.textContent = money(total);
 
-    // SKU preliminar: Txx-<FLV>
-    const sku = `${sizeCode}-${flavorCode}`;
+    // SKU: Txx-BASE-FLV
+    const sku = `${sizeCode}-${baseOpt.value}-${flavorOpt.value}`;
     $sku.textContent = sku;
 
-    // Guardado temporal por si quieres usar después
     sessionStorage.setItem('ttm_step1', JSON.stringify({
       size: sizeCode,
-      flavor: flavorCode,
-      priceBase: base,
-      deltaFlavor: delta,
+      base: baseOpt.value,
+      flavor: flavorOpt.value,
+      priceSize: basePrice,
+      deltaBase: baseDelta,
+      deltaFlavor: flavorDelta,
       priceTotal: total
     }));
   }
 
-  $size.addEventListener('change', ()=>{ updateMeta(); updateSummary(); });
-  $flavor.addEventListener('change', updateSummary);
+  [$size,$base,$flavor].forEach(el => el.addEventListener('change', updateSummary));
 
-  // Init
+  // init
   updateMeta();
   updateSummary();
+
+  // Responsivo simple para 2 columnas en pantallas medianas
+  const grid = document.querySelector('#step1 .grid');
+  const mq = window.matchMedia('(max-width: 980px)');
+  function resp(){ grid.style.gridTemplateColumns = mq.matches ? '1fr' : '1fr 1fr 1fr'; }
+  resp(); mq.addEventListener('change', resp);
 })();
 </script>
-
-    
 
     <!-- 2) Rellenos y coberturas -->
     <section class="card">
@@ -356,4 +357,5 @@
   </script>
 </body>
 </html>
+
 
