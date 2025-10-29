@@ -107,8 +107,104 @@
     </div>
   </div>
 </section>
-    
-    <script>
+
+    <!-- ============ 2) RELLENOS Y COBERTURA ============ -->
+<section id="step2" class="card" style="margin-top:16px">
+  <h2>2) Rellenos y coberturas</h2>
+  <p class="note" style="margin:-6px 0 12px">
+    Selecciona hasta <b>dos rellenos</b> y una <b>cobertura</b>. Mostramos opciones compatibles con tu marco del paso 1.
+  </p>
+
+  <div class="grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <!-- Relleno 1 -->
+    <div>
+      <label for="fill1">Relleno 1</label>
+      <select id="fill1" name="fill1">
+        <!-- opciones se cargan por JS -->
+      </select>
+      <p id="fill1Meta" class="note" style="margin:.35rem 0 0"></p>
+    </div>
+
+    <!-- Relleno 2 (opcional) -->
+    <div>
+      <label for="fill2">Relleno 2 (opcional)</label>
+      <select id="fill2" name="fill2">
+        <option value="">— Sin segundo relleno —</option>
+      </select>
+      <p id="fill2Meta" class="note" style="margin:.35rem 0 0"></p>
+    </div>
+
+    <!-- Cobertura -->
+    <div>
+      <label for="cover">Cobertura</label>
+      <select id="cover" name="cover">
+        <!-- opciones se cargan por JS -->
+      </select>
+      <p id="coverMeta" class="note" style="margin:.35rem 0 0"></p>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="card" style="margin-top:14px;background:#fcfcfd">
+    <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+      <div>
+        <div class="note">SKU (con rellenos y cobertura)</div>
+        <div id="skuStep2" class="mono" style="font-weight:700">–</div>
+      </div>
+      <div>
+        <div class="note">Total estimado (acum.)</div>
+        <div id="priceStep2" style="font-size:1.25rem;font-weight:800">$0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <!-- 3) Extras -->
+    <section class="card">
+      <h2>3) Extras</h2>
+      <div class="grid">
+        <label><input type="checkbox" class="extra" data-name="Velas" data-price="800"> Velas</label>
+        <label><input type="checkbox" class="extra" data-name="Toppers" data-price="2500"> Toppers</label>
+        <label><input type="checkbox" class="extra" data-name="Mini galletas" data-price="3000"> Mini galletas</label>
+        <label><input type="checkbox" class="extra" data-name="Mensaje en chocolate" data-price="1200"> Mensaje en chocolate</label>
+      </div>
+      <p class="note">Los extras se agregan al total y aparecen como etiquetas.</p>
+    </section>
+
+    <!-- 4) Notas -->
+    <section class="card">
+      <h2>4) Notas del pedido</h2>
+      <textarea id="notas" rows="3" placeholder="Texto de mensaje, colores, indicaciones…"></textarea>
+    </section>
+
+    <!-- Resumen -->
+    <section class="card">
+      <h2>Resumen</h2>
+      <div id="sku" class="note mono"></div>
+      <ul id="summary" class="note"></ul>
+      <div class="row" style="justify-content:space-between;margin-top:8px">
+        <div class="badges" id="badges"></div>
+        <div class="tot" id="total">$0</div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="btnAdd">Añadir al carrito (demo)</button>
+        <button class="btn secondary" id="btnNext">Continuar</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>© Teretortas y Más · Demo</span>
+      <span class="links">
+        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+      </span>
+    </div>
+  </footer>
+
+   <script>
 /* ====== Lógica básica del paso 1 (con MARCO) ====== */
 (function(){
   // Precios base por tamaño (CLP)
@@ -170,112 +266,152 @@
 })();
 </script>
 
-    <!-- 2) Rellenos y coberturas -->
-    <section class="card">
-      <h2>2) Rellenos y coberturas</h2>
-      <div class="grid">
-        <div>
-          <label for="relleno">Relleno principal</label>
-          <select id="relleno">
-            <option value="manjar" data-price="1200">Manjar</option>
-            <option value="crema" data-price="1500">Crema</option>
-            <option value="frambuesa" data-price="1800">Frambuesa</option>
-            <option value="chocolate" data-price="1800">Chocolate</option>
-            <option value="nutella" data-price="2200">Nutella</option>
-            <option value="vegano" data-price="2000" data-tag="veg">Crema vegana</option>
-            <option value="sin_azucar" data-price="2000" data-tag="sz">Relleno sin azúcar</option>
-            <option value="sin_gluten" data-price="2000" data-tag="sg">Relleno sin gluten</option>
-          </select>
-          <p class="note">Elegido siempre; el precio se suma al total.</p>
-        </div>
+  <script>
+/* ====== Paso 2: catálogo, filtros y precio ====== */
+(function(){
+  // Leer lo seleccionado en paso 1
+  const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+  // Mapa de restricciones derivadas del MARCO (base)
+  // Flags: v=vegano, s=sugar-free, g=gluten-free
+  const RESTR_FOR_BASE = {
+    TRD: {v:false, s:false, g:false},
+    SAZ: {v:false, s:true,  g:false},
+    SGL: {v:false, s:false, g:true },
+    INT: {v:false, s:false, g:false},           // integral sin restricción
+    ISG: {v:false, s:false, g:true },           // integral sin gluten
+    VEG: {v:true,  s:false, g:false},
+    VGS: {v:true,  s:false, g:true }            // vegano + sin gluten
+  };
+  const need = RESTR_FOR_BASE[s1.base] || {v:false,s:false,g:false};
 
-        <div>
-          <label for="relleno2">Relleno adicional (opcional)</label>
-          <select id="relleno2">
-            <option value="" data-price="0">— Sin relleno extra —</option>
-            <option value="manjar" data-price="1200">Manjar</option>
-            <option value="crema" data-price="1500">Crema</option>
-            <option value="frambuesa" data-price="1800">Frambuesa</option>
-            <option value="chocolate" data-price="1800">Chocolate</option>
-            <option value="nutella" data-price="2200">Nutella</option>
-            <option value="vegano" data-price="2000" data-tag="veg">Crema vegana</option>
-            <option value="sin_azucar" data-price="2000" data-tag="sz">Relleno sin azúcar</option>
-            <option value="sin_gluten" data-price="2000" data-tag="sg">Relleno sin gluten</option>
-          </select>
-          <p class="note">Si eliges uno, se suma al precio y se muestra en el resumen.</p>
-        </div>
-      </div>
+  // Catálogo (puedes editar precios/compatibilidades)
+  const FILLS = [
+    {code:'MUS', name:'Mousse de chocolate',    price:2500, v:true,  s:false, g:true },
+    {code:'DLC', name:'Dulce de leche',         price:1500, v:true,  s:false, g:true },
+    {code:'FRU', name:'Frutos rojos',           price:2200, v:true,  s:true,  g:true },
+    {code:'CRE', name:'Crema pastelera',        price:1800, v:false, s:false, g:true },
+    {code:'LIM', name:'Crema de limón',         price:1800, v:true,  s:true,  g:true },
+    {code:'QCH', name:'Cheesecake (capas)',     price:2800, v:false, s:false, g:true },
+    {code:'NUT', name:'Praliné de avellanas',   price:2600, v:true,  s:true,  g:true },
+    {code:'ZAN', name:'Zanahoria especiada',    price:1900, v:true,  s:true,  g:true },
+    {code:'MAN', name:'Manjar sin azúcar',      price:2200, v:true,  s:true,  g:true }
+  ];
+  const COVERS = [
+    {code:'GAN', name:'Ganache chocolate',      price:2500, v:true,  s:false, g:true },
+    {code:'BUT', name:'Buttercream clásico',    price:1800, v:false, s:false, g:true },
+    {code:'CRM', name:'Crema chantilly',        price:1500, v:false, s:false, g:true },
+    {code:'MER', name:'Merengue italiano',      price:1400, v:true,  s:true,  g:true },
+    {code:'GLS', name:'Glaseado cítrico',       price:1200, v:true,  s:true,  g:true },
+    {code:'VGN', name:'Buttercream vegano',     price:2200, v:true,  s:true,  g:true }
+  ];
 
-      <div class="grid" style="margin-top:10px">
-        <div>
-          <label for="cobertura">Cobertura</label>
-          <select id="cobertura">
-            <option value="chantilly" data-price="0">Chantilly</option>
-            <option value="ganache" data-price="1800">Ganache chocolate</option>
-            <option value="merengue" data-price="1000">Merengue italiano</option>
-            <option value="buttercream" data-price="1200">Buttercream</option>
-            <option value="vegana" data-price="2000" data-tag="veg">Cobertura vegana</option>
-            <option value="sg" data-price="2000" data-tag="sg">Cobertura sin gluten</option>
-            <option value="sz" data-price="2000" data-tag="sz">Cobertura sin azúcar</option>
-          </select>
-        </div>
-        <div>
-          <label for="diseno">Diseño/terminación</label>
-          <select id="diseno">
-            <option value="clasico" data-price="0">Clásico</option>
-            <option value="drip" data-price="1500">Drip cake</option>
-            <option value="naked" data-price="1000">Naked cake</option>
-            <option value="premium" data-price="3500">Premium personalizado</option>
-          </select>
-        </div>
-      </div>
-    </section>
+  const $fill1 = document.getElementById('fill1');
+  const $fill2 = document.getElementById('fill2');
+  const $cover = document.getElementById('cover');
+  const $f1m = document.getElementById('fill1Meta');
+  const $f2m = document.getElementById('fill2Meta');
+  const $cvm = document.getElementById('coverMeta');
+  const $sku = document.getElementById('skuStep2');
+  const $price= document.getElementById('priceStep2');
 
-    <!-- 3) Extras -->
-    <section class="card">
-      <h2>3) Extras</h2>
-      <div class="grid">
-        <label><input type="checkbox" class="extra" data-name="Velas" data-price="800"> Velas</label>
-        <label><input type="checkbox" class="extra" data-name="Toppers" data-price="2500"> Toppers</label>
-        <label><input type="checkbox" class="extra" data-name="Mini galletas" data-price="3000"> Mini galletas</label>
-        <label><input type="checkbox" class="extra" data-name="Mensaje en chocolate" data-price="1200"> Mensaje en chocolate</label>
-      </div>
-      <p class="note">Los extras se agregan al total y aparecen como etiquetas.</p>
-    </section>
+  function money(n){ return (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
 
-    <!-- 4) Notas -->
-    <section class="card">
-      <h2>4) Notas del pedido</h2>
-      <textarea id="notas" rows="3" placeholder="Texto de mensaje, colores, indicaciones…"></textarea>
-    </section>
+  // Helper: ¿item es compatible con las necesidades del marco?
+  function compatible(item){
+    if (need.v && !item.v) return false;
+    if (need.s && !item.s) return false;
+    if (need.g && !item.g) return false;
+    return true;
+  }
 
-    <!-- Resumen -->
-    <section class="card">
-      <h2>Resumen</h2>
-      <div id="sku" class="note mono"></div>
-      <ul id="summary" class="note"></ul>
-      <div class="row" style="justify-content:space-between;margin-top:8px">
-        <div class="badges" id="badges"></div>
-        <div class="tot" id="total">$0</div>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <button class="btn" id="btnAdd">Añadir al carrito (demo)</button>
-        <button class="btn secondary" id="btnNext">Continuar</button>
-      </div>
-    </section>
-  </main>
+  // Render de selects según compatibilidad
+  function renderOptions(){
+    // Relleno 1
+    $fill1.innerHTML = '';
+    FILLS.filter(compatible).forEach(f=>{
+      const opt = document.createElement('option');
+      opt.value = f.code;
+      opt.textContent = `${f.name} (+${money(f.price)})`;
+      opt.dataset.price = f.price;
+      $fill1.appendChild(opt);
+    });
 
-  <footer>
-    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>© Teretortas y Más · Demo</span>
-      <span class="links">
-        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
-        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
-        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
-      </span>
-    </div>
-  </footer>
+    // Relleno 2 (con opción vacía)
+    $fill2.innerHTML = '<option value="">— Sin segundo relleno —</option>';
+    FILLS.filter(compatible).forEach(f=>{
+      const opt = document.createElement('option');
+      opt.value = f.code;
+      opt.textContent = `${f.name} (+${money(f.price)})`;
+      opt.dataset.price = f.price;
+      $fill2.appendChild(opt);
+    });
 
+    // Coberturas
+    $cover.innerHTML = '';
+    COVERS.filter(compatible).forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = `${c.name} (+${money(c.price)})`;
+      opt.dataset.price = c.price;
+      $cover.appendChild(opt);
+    });
+  }
+
+  function metaText(code, list){
+    const it = list.find(x=>x.code===code);
+    return it ? `${it.name} · ${money(it.price)}` : '—';
+  }
+
+  function updateSummary(){
+    const f1 = $fill1.value;
+    const f2 = $fill2.value || '';
+    const cv = $cover.value;
+
+    // evitar mismo relleno duplicado (opcional)
+    if (f1 && f2 && f1===f2){
+      $fill2.value = '';
+      return updateSummary();
+    }
+
+    $f1m.textContent = metaText(f1, FILLS);
+    $f2m.textContent = f2 ? metaText(f2, FILLS) : '—';
+    $cvm.textContent = metaText(cv, COVERS);
+
+    const p1 = Number($fill1.selectedOptions[0]?.dataset.price || 0);
+    const p2 = Number($fill2.selectedOptions[0]?.dataset.price || 0);
+    const pc = Number($cover.selectedOptions[0]?.dataset.price || 0);
+
+    // total acumulado = paso1.priceTotal + sumas de paso2
+    const baseTotal = Number(s1?.priceTotal || 0);
+    const total = baseTotal + p1 + p2 + pc;
+    $price.textContent = money(total);
+
+    // SKU: <paso1 SKU> - <R1><R2>-<COV>
+    const sku_s1 = `${s1?.size || 'T??'}-${s1?.base || '???'}-${s1?.flavor || '???'}`;
+    const sku_s2 = `${f1 || 'NR'}${f2 || ''}-${cv || 'NC'}`;
+    $sku.textContent = `${sku_s1}-${sku_s2}`;
+
+    // Guardar paso 2
+    sessionStorage.setItem('ttm_step2', JSON.stringify({
+      fill1: f1, fill2: f2, cover: cv,
+      priceFill1: p1, priceFill2: p2, priceCover: pc,
+      priceTotal: total
+    }));
+  }
+
+  // Init
+  renderOptions();
+  [$fill1,$fill2,$cover].forEach(el=>el.addEventListener('change', updateSummary));
+  updateSummary();
+
+  // Responsivo: 1–3 columnas
+  const grid = document.querySelector('#step2 .grid');
+  const mq2  = window.matchMedia('(max-width: 980px)');
+  function resp(){ grid.style.gridTemplateColumns = mq2.matches ? '1fr' : '1fr 1fr 1fr'; }
+  resp(); mq2.addEventListener('change', resp);
+})();
+</script>
+  
   <script>
     const q = sel => document.querySelector(sel);
     const all = sel => Array.from(document.querySelectorAll(sel));
@@ -357,5 +493,6 @@
   </script>
 </body>
 </html>
+
 
 
