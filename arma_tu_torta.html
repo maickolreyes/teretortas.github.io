@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teretortas y Más · Arma tu torta</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+    @media (max-width:780px){.grid{grid-template-columns:1fr}}
+    section.card{background:#fff;border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:16px;margin:12px 0}
+    h1{font-size:28px;margin:6px 0 2px}
+    h2{font-size:18px;margin:0 0 12px}
+    label{font-weight:700;display:block;margin-bottom:6px}
+    select, input[type="number"], input[type="text"], textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px}
+    .note{color:#6b7280;font-size:12px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .pill{padding:4px 10px;border-radius:999px;background:#f3f4f6;font-size:12px}
+    .tot{font-size:22px;font-weight:800}
+    .btn{background:#111827;color:#fff;border:none;padding:12px 16px;border-radius:10px;cursor:pointer}
+    .btn.secondary{background:#f3f4f6;color:#111827}
+    .badges{display:flex;gap:8px;flex-wrap:wrap}
+    footer .links a{margin-left:10px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container brand">
+      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+      <div>
+        <h1>Arma tu torta</h1>
+        <nav class="note">
+          <a href="index.html">Inicio</a>
+          <a href="arma_tu_torta.html" class="active"><b>Arma tu torta</b></a>
+          <a href="agenda.html">Agenda</a>
+          <a href="inventario.html">Inventario</a>
+        </nav>
+        <div class="note">Configura tamaño, sabor, <b>dos rellenos</b> (opcional), cobertura y extras. Precios demo.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- 1) Tamaño y sabor -->
+    <section class="card">
+      <h2>1) Tamaño y sabor</h2>
+      <div class="grid">
+        <div>
+          <label for="tamano">Tamaño</label>
+          <select id="tamano">
+            <option value="12p" data-price="15990">12 porciones</option>
+            <option value="16p" data-price="19990">16 porciones</option>
+            <option value="20p" data-price="25990">20 porciones</option>
+            <option value="30p" data-price="35990">30 porciones</option>
+          </select>
+        </div>
+        <div>
+          <label for="sabor">Sabor del bizcocho</label>
+          <select id="sabor">
+            <option value="vainilla" data-price="0">Vainilla</option>
+            <option value="chocolate" data-price="1200">Chocolate</option>
+            <option value="red_velvet" data-price="1800">Red Velvet</option>
+            <option value="zanahoria" data-price="1500">Zanahoria</option>
+            <option value="vegano" data-price="2000" data-tag="veg">Vainilla vegana</option>
+            <option value="sin_gluten" data-price="2500" data-tag="sg">Vainilla sin gluten</option>
+            <option value="sin_azucar" data-price="2500" data-tag="sz">Vainilla sin azúcar</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) Rellenos y coberturas -->
+    <section class="card">
+      <h2>2) Rellenos y coberturas</h2>
+      <div class="grid">
+        <div>
+          <label for="relleno">Relleno principal</label>
+          <select id="relleno">
+            <option value="manjar" data-price="1200">Manjar</option>
+            <option value="crema" data-price="1500">Crema</option>
+            <option value="frambuesa" data-price="1800">Frambuesa</option>
+            <option value="chocolate" data-price="1800">Chocolate</option>
+            <option value="nutella" data-price="2200">Nutella</option>
+            <option value="vegano" data-price="2000" data-tag="veg">Crema vegana</option>
+            <option value="sin_azucar" data-price="2000" data-tag="sz">Relleno sin azúcar</option>
+            <option value="sin_gluten" data-price="2000" data-tag="sg">Relleno sin gluten</option>
+          </select>
+          <p class="note">Elegido siempre; el precio se suma al total.</p>
+        </div>
+
+        <div>
+          <label for="relleno2">Relleno adicional (opcional)</label>
+          <select id="relleno2">
+            <option value="" data-price="0">— Sin relleno extra —</option>
+            <option value="manjar" data-price="1200">Manjar</option>
+            <option value="crema" data-price="1500">Crema</option>
+            <option value="frambuesa" data-price="1800">Frambuesa</option>
+            <option value="chocolate" data-price="1800">Chocolate</option>
+            <option value="nutella" data-price="2200">Nutella</option>
+            <option value="vegano" data-price="2000" data-tag="veg">Crema vegana</option>
+            <option value="sin_azucar" data-price="2000" data-tag="sz">Relleno sin azúcar</option>
+            <option value="sin_gluten" data-price="2000" data-tag="sg">Relleno sin gluten</option>
+          </select>
+          <p class="note">Si eliges uno, se suma al precio y se muestra en el resumen.</p>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <label for="cobertura">Cobertura</label>
+          <select id="cobertura">
+            <option value="chantilly" data-price="0">Chantilly</option>
+            <option value="ganache" data-price="1800">Ganache chocolate</option>
+            <option value="merengue" data-price="1000">Merengue italiano</option>
+            <option value="buttercream" data-price="1200">Buttercream</option>
+            <option value="vegana" data-price="2000" data-tag="veg">Cobertura vegana</option>
+            <option value="sg" data-price="2000" data-tag="sg">Cobertura sin gluten</option>
+            <option value="sz" data-price="2000" data-tag="sz">Cobertura sin azúcar</option>
+          </select>
+        </div>
+        <div>
+          <label for="diseno">Diseño/terminación</label>
+          <select id="diseno">
+            <option value="clasico" data-price="0">Clásico</option>
+            <option value="drip" data-price="1500">Drip cake</option>
+            <option value="naked" data-price="1000">Naked cake</option>
+            <option value="premium" data-price="3500">Premium personalizado</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3) Extras -->
+    <section class="card">
+      <h2>3) Extras</h2>
+      <div class="grid">
+        <label><input type="checkbox" class="extra" data-name="Velas" data-price="800"> Velas</label>
+        <label><input type="checkbox" class="extra" data-name="Toppers" data-price="2500"> Toppers</label>
+        <label><input type="checkbox" class="extra" data-name="Mini galletas" data-price="3000"> Mini galletas</label>
+        <label><input type="checkbox" class="extra" data-name="Mensaje en chocolate" data-price="1200"> Mensaje en chocolate</label>
+      </div>
+      <p class="note">Los extras se agregan al total y aparecen como etiquetas.</p>
+    </section>
+
+    <!-- 4) Notas -->
+    <section class="card">
+      <h2>4) Notas del pedido</h2>
+      <textarea id="notas" rows="3" placeholder="Texto de mensaje, colores, indicaciones…"></textarea>
+    </section>
+
+    <!-- Resumen -->
+    <section class="card">
+      <h2>Resumen</h2>
+      <div id="sku" class="note mono"></div>
+      <ul id="summary" class="note"></ul>
+      <div class="row" style="justify-content:space-between;margin-top:8px">
+        <div class="badges" id="badges"></div>
+        <div class="tot" id="total">$0</div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="btnAdd">Añadir al carrito (demo)</button>
+        <button class="btn secondary" id="btnNext">Continuar</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>© Teretortas y Más · Demo</span>
+      <span class="links">
+        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    const q = sel => document.querySelector(sel);
+    const all = sel => Array.from(document.querySelectorAll(sel));
+    const CLP = n => n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+
+    const tamano = q('#tamano');
+    const sabor = q('#sabor');
+    const relleno = q('#relleno');
+    const relleno2 = q('#relleno2');
+    const cobertura = q('#cobertura');
+    const diseno = q('#diseno');
+    const extras = all('.extra');
+
+    function valPrice(sel){ const opt = sel.options[sel.selectedIndex]; return Number(opt?.dataset.price || 0); }
+    function valText(sel){ return sel.options[sel.selectedIndex]?.text || '—'; }
+    function valValue(sel){ return sel.value || ''; }
+    function tagOf(sel){ const opt = sel.options[sel.selectedIndex]; return opt?.dataset?.tag || ''; }
+
+    function update(){
+      let total = 0;
+      const summary = [];
+      const badges = [];
+      const skuParts = ['TT'];
+
+      total += valPrice(tamano);
+      summary.push(`Tamaño: ${valText(tamano)}`);
+      skuParts.push(valValue(tamano).toUpperCase());
+
+      total += valPrice(sabor);
+      summary.push(`Sabor: ${valText(sabor)}`);
+      const tagSabor = tagOf(sabor);
+      if(tagSabor) badges.push(tagSabor.toUpperCase());
+
+      const r1 = {v:valValue(relleno), lbl:valText(relleno), p:valPrice(relleno), tag:tagOf(relleno)};
+      const r2 = {v:valValue(relleno2), lbl:valText(relleno2), p:valPrice(relleno2), tag:tagOf(relleno2)};
+      const rellenosTot = r1.p + (r2.v ? r2.p : 0);
+      total += rellenosTot;
+
+      summary.push(`Relleno: ${r1.lbl}${r2.v ? ' + ' + r2.lbl : ''}`);
+      if(r2.v) badges.push('2 RELLENOS');
+      if(r1.tag) badges.push(r1.tag.toUpperCase());
+      if(r2.tag) badges.push(r2.tag.toUpperCase());
+      if(r2.v) skuParts.push(`R2-${r2.v.toUpperCase()}`);
+
+      total += valPrice(cobertura);
+      summary.push(`Cobertura: ${valText(cobertura)}`);
+      const tagCob = tagOf(cobertura);
+      if(tagCob) badges.push(tagCob.toUpperCase());
+
+      total += valPrice(diseno);
+      summary.push(`Diseño: ${valText(diseno)}`);
+
+      const chosenExtras = extras.filter(e=>e.checked).map(e=>({name:e.dataset.name, price:Number(e.dataset.price||0)}));
+      chosenExtras.forEach(ex => total += ex.price);
+      chosenExtras.forEach(ex => badges.push(ex.name));
+
+      q('#summary').innerHTML = summary.map(s=>`<li>${s}</li>`).join('');
+      q('#badges').innerHTML = badges.map(b=>`<span class="pill">${b}</span>`).join('');
+      q('#total').textContent = CLP(total);
+
+      const sku = [...skuParts, sabor.value.toUpperCase(), r1.v.toUpperCase()].join('-');
+      q('#sku').textContent = `SKU (demo): ${sku}`;
+    }
+
+    ['change','input'].forEach(ev => {
+      [tamano,sabor,relleno,relleno2,cobertura,diseno].forEach(el => el.addEventListener(ev, update));
+      all('.extra').forEach(el => el.addEventListener(ev, update));
+    });
+    update();
+
+    q('#btnAdd').onclick = ()=>alert('Agregado (demo).');
+    q('#btnNext').onclick = ()=>location.href='index.html';
+
+    // Marca enlace activo si quitas el <b>
+    document.querySelectorAll('header nav a').forEach(a=>{
+      const href = a.getAttribute('href') || '';
+      if (location.pathname.endsWith(href)) a.classList.add('active');
+    });
+  </script>
+</body>
+</html>

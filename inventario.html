@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teretortas y Más · Inventario (Demo)</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:14px 0}
+    .toolbar input, .toolbar select{height:38px}
+    .pill2{padding:2px 8px;border-radius:999px;font-size:12px;color:#111}
+    .ok{background:#dcfce7;color:#065f46}
+    .warn{background:#fef9c3;color:#854d0e}
+    .bad{background:#fee2e2;color:#991b1b}
+    .btn.secondary{background:#1118271a;color:#111827}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+    th{background:#f8fafc;font-weight:800;font-size:12px;letter-spacing:.04em;color:#374151;position:sticky;top:0}
+    tr:last-child td{border-bottom:none}
+    .right{text-align:right}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .small{font-size:12px;color:#6b7280}
+    .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}
+    @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}
+    .kpi b{font-size:20px;display:block}
+    .editable{cursor:pointer}
+    .editable input{width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px}
+    footer .links a{margin-left:10px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container brand">
+      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+      <div>
+        <h1>Inventario · Admin</h1>
+        <nav class="note">
+          <a href="index.html">Inicio</a>
+          <a href="arma_tu_torta.html">Arma tu torta</a>
+          <a href="agenda.html">Agenda</a>
+          <a href="inventario.html" class="active"><b>Inventario</b></a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi"><small>Bajo mínimo</small><b id="k_min">0</b></div>
+      <div class="kpi"><small>Por vencer (&lt;7d)</small><b id="k_pv">0</b></div>
+      <div class="kpi"><small>Vencidos</small><b id="k_vec">0</b></div>
+      <div class="kpi"><small>Valor stock (costo)</small><b id="k_cost">$0</b></div>
+      <div class="kpi"><small>Valor stock (venta)</small><b id="k_venta">$0</b></div>
+      <div class="kpi"><small>Margen estimado</small><b id="k_margen">0%</b><span class="note">Sobre ítems visibles</span></div>
+    </div>
+
+    <div class="card" style="padding:12px">
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Buscar (SKU, nombre, lote, categoría)">
+        <select id="fLinea">
+          <option value="">Línea (todas)</option>
+          <option>Vegana</option>
+          <option>Sin Azúcar</option>
+          <option>Sin Gluten</option>
+          <option>Convencional</option>
+        </select>
+        <select id="fCat">
+          <option value="">Categoría (todas)</option>
+          <option>Torta</option>
+          <option>Insumo</option>
+          <option>Decoración</option>
+          <option>Packaging</option>
+        </select>
+        <button class="btn" id="btnIngreso">+ Ingreso</button>
+        <button class="btn secondary" id="btnEgreso">– Egreso</button>
+        <button class="btn secondary" id="btnMerma">✖ Merma</button>
+        <button class="btn secondary" id="btnCuadre">Cuadre del mes</button>
+        <button class="btn secondary" id="btnCSV">Exportar CSV</button>
+      </div>
+    </div>
+
+    <section class="card" style="padding:12px">
+      <h2 style="font-size:16px;margin:6px 0 12px">Stock, FEFO y Margen (doble clic para editar)</h2>
+      <div class="note" style="margin-bottom:8px">*Demo local: sin base de datos. Cambios y movimientos quedan en tu navegador (localStorage).</div>
+      <div style="overflow:auto; max-height:60vh">
+      <table id="tabla">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Nombre</th>
+            <th>Línea</th>
+            <th>Cat.</th>
+            <th>Lote</th>
+            <th>Vence</th>
+            <th class="right">Stock</th>
+            <th class="right">Mín.</th>
+            <th class="right">Costo</th>
+            <th class="right">Precio</th>
+            <th class="right">Margen %</th>
+            <th class="right">Stock costo</th>
+            <th class="right">Stock venta</th>
+            <th>Estado</th>
+            <th>Reponer</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </section>
+
+    <p class="note" style="margin-top:10px">Estados: <span class="pill2 ok">OK</span> · <span class="pill2 warn">Por vencer (&lt;7d)</span> · <span class="pill2 bad">Vencido</span></p>
+  </div>
+
+  <footer>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>© Teretortas y Más · Demo</span>
+      <span class="links">
+        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    // ------- Persistencia -------
+    const LS_ITEMS = 'inv_items_v1';
+    const LS_MOVS  = 'inv_movs_v1';
+
+    const seedItems = [
+      {sku:"TOR-VEG-20-VAN", nombre:"Torta 20p Vainilla", linea:"Vegana",       cat:"Torta",     lote:"A2311",  vence:"2025-12-31", stock:8,  min:3, costo:12000, precio:29990},
+      {sku:"TOR-SG-12-CHO",  nombre:"Torta 12p Chocolate", linea:"Sin Gluten",  cat:"Torta",     lote:"G2401",  vence:"2025-04-15", stock:2,  min:4, costo:9000,  precio:19990},
+      {sku:"INS-CHOC-70",    nombre:"Cobertura chocolate 70%", linea:"Convencional", cat:"Insumo", lote:"C2403",  vence:"2025-03-05", stock:12, min:8, costo:3500,  precio:0},
+      {sku:"INS-HAR-SG",     nombre:"Harina sin gluten 1kg",  linea:"Sin Gluten", cat:"Insumo",   lote:"H2402",  vence:"2025-02-01", stock:5,  min:6, costo:2800,  precio:0},
+      {sku:"DEC-TOP-GLT",    nombre:"Topper 'Feliz Cumple'",  linea:"Todas",    cat:"Decoración", lote:"TOP2401",vence:"2026-01-01", stock:25, min:10,costo:700,   precio:1500},
+      {sku:"PKG-CAJA-12",    nombre:"Caja torta 12p",         linea:"Todas",    cat:"Packaging", lote:"P2401",  vence:"2027-01-01", stock:40, min:20,costo:450,   precio:900},
+      {sku:"INS-CRE-VEG",    nombre:"Crema vegetal 1L",       linea:"Vegana",   cat:"Insumo",    lote:"V2405",  vence:"2025-01-15", stock:3,  min:6, costo:1900,  precio:0},
+      {sku:"INS-ERS-SZ",     nombre:"Eritritol 1kg",          linea:"Sin Azúcar",cat:"Insumo",   lote:"SZ2402", vence:"2026-06-30", stock:9,  min:5, costo:3400,  precio:0}
+    ];
+
+    function loadItems(){
+      const raw = localStorage.getItem(LS_ITEMS);
+      return raw ? JSON.parse(raw) : seedItems.slice();
+    }
+    function saveItems(items){ localStorage.setItem(LS_ITEMS, JSON.stringify(items)); }
+    function loadMovs(){
+      const raw = localStorage.getItem(LS_MOVS);
+      return raw ? JSON.parse(raw) : [];
+    }
+    function saveMovs(movs){ localStorage.setItem(LS_MOVS, JSON.stringify(movs)); }
+
+    let items = loadItems();
+    let movs  = loadMovs();
+
+    // ------- Utilidades -------
+    const el = (id)=>document.getElementById(id);
+    const tbody = document.querySelector("#tabla tbody");
+    const fLinea = document.getElementById("fLinea");
+    const fCat = document.getElementById("fCat");
+    const q = document.getElementById("q");
+    const clp = n => n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+
+    function daysUntil(dateStr){
+      const now = new Date();
+      const d = new Date(dateStr+"T00:00:00");
+      return Math.ceil((d - now)/(1000*60*60*24));
+    }
+    function estadoVencimiento(vence){
+      const d = daysUntil(vence);
+      if (d < 0) return {txt:"Vencido", cls:"bad"};
+      if (d <= 7) return {txt:"Por vencer", cls:"warn"};
+      return {txt:"OK", cls:"ok"};
+    }
+    function shouldReorder(it){ return it.stock < it.min ? `+${(it.min - it.stock)}` : ""; }
+    function margenPct(it){ return (!it.precio || it.precio<=0) ? 0 : Math.max(0, Math.round(((it.precio - it.costo)/it.precio)*100)); }
+
+    function renderKPIs(filtered){
+      let bajoMin=0, porVencer=0, vencidos=0, stockCosto=0, stockVenta=0;
+      filtered.forEach(it=>{
+        const e = estadoVencimiento(it.vence);
+        if(it.stock < it.min) bajoMin++;
+        if(e.cls==='warn') porVencer++;
+        if(e.cls==='bad') vencidos++;
+        stockCosto += it.costo * it.stock;
+        stockVenta += (it.precio||0) * it.stock;
+      });
+      el('k_min').textContent = bajoMin;
+      el('k_pv').textContent = porVencer;
+      el('k_vec').textContent = vencidos;
+      el('k_cost').textContent = clp(stockCosto);
+      el('k_venta').textContent = clp(stockVenta);
+      const margen = stockVenta>0 ? Math.round(((stockVenta - stockCosto)/stockVenta)*100) : 0;
+      el('k_margen').textContent = `${margen}%`;
+    }
+
+    function render(){
+      tbody.innerHTML = "";
+      const term = (q.value||"").toLowerCase();
+      let filtered = items.filter(it => {
+        const okLinea = !fLinea.value || it.linea === fLinea.value || it.linea === "Todas";
+        const okCat = !fCat.value || it.cat === fCat.value;
+        const okTerm = !term || (it.sku+it.nombre+it.lote+it.cat).toLowerCase().includes(term);
+        return okLinea && okCat && okTerm;
+      });
+
+      renderKPIs(filtered);
+
+      filtered.forEach(it => {
+        const est = estadoVencimiento(it.vence);
+        const mp = margenPct(it);
+        const valCosto = it.costo * it.stock;
+        const valVenta = (it.precio||0) * it.stock;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="mono">${it.sku}</td>
+          <td>${it.nombre}<div class="small">Línea ${it.linea}</div></td>
+          <td>${it.linea}</td>
+          <td>${it.cat}</td>
+          <td class="mono">${it.lote}</td>
+          <td>${it.vence}</td>
+          <td class="right editable" data-sku="${it.sku}" data-field="stock">${it.stock}</td>
+          <td class="right editable" data-sku="${it.sku}" data-field="min">${it.min}</td>
+          <td class="right editable" data-sku="${it.sku}" data-field="costo">${clp(it.costo)}</td>
+          <td class="right editable" data-sku="${it.sku}" data-field="precio">${it.precio?clp(it.precio):'—'}</td>
+          <td class="right">${mp}%</td>
+          <td class="right">${clp(valCosto)}</td>
+          <td class="right">${valVenta?clp(valVenta):'—'}</td>
+          <td><span class="pill2 ${est.cls}">${est.txt}</span></td>
+          <td>${shouldReorder(it)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      bindInlineEditing();
+    }
+
+    // ------- Edición inline (doble clic) -------
+    function parseMoneyToNumber(txt){
+      return Number(String(txt).replace(/[^\d.-]/g,''));
+    }
+    function bindInlineEditing(){
+      tbody.querySelectorAll('.editable').forEach(td=>{
+        td.ondblclick = ()=>{
+          if(td.querySelector('input')) return;
+          const sku = td.dataset.sku;
+          const field = td.dataset.field;
+          const currentText = td.textContent.trim();
+          const currentVal = (field==='costo'||field==='precio') ? parseMoneyToNumber(currentText) : Number(currentText);
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '1';
+          input.value = currentVal || 0;
+          td.innerHTML = '';
+          td.appendChild(input);
+          input.focus();
+          input.onblur = ()=>commitEdit(td, sku, field, input.value);
+          input.onkeydown = e => { if(e.key==='Enter'){ input.blur(); } if(e.key==='Escape'){ render(); } };
+        };
+      });
+    }
+    function commitEdit(td, sku, field, value){
+      const it = items.find(x=>x.sku===sku);
+      if(!it){ render(); return; }
+      let v = Number(value);
+      if(isNaN(v)) v = 0;
+      if(field==='stock' || field==='min'){ v = Math.max(0, Math.round(v)); }
+      it[field] = v;
+      saveItems(items);
+      render();
+    }
+
+    // ------- Movimientos -------
+    function promptMove(type){
+      const sku = prompt("SKU (exacto):");
+      if(!sku) return;
+      const it = items.find(x=>x.sku===sku.trim());
+      if(!it){ alert("SKU no encontrado"); return; }
+      const qty = Number(prompt("Cantidad (número positivo):"));
+      if(!(qty>0)){ alert("Cantidad inválida"); return; }
+      if(type!=='ingreso' && it.stock-qty < 0){ alert("No hay stock suficiente"); return; }
+
+      if(type==='ingreso') it.stock += qty;
+      if(type==='egreso' || type==='merma') it.stock -= qty;
+
+      movs.push({
+        fecha: new Date().toISOString(),
+        sku: it.sku,
+        nombre: it.nombre,
+        tipo: type,           // ingreso | egreso | merma
+        qty: qty,
+        costo: it.costo,
+        precio: it.precio || 0
+      });
+      saveItems(items); saveMovs(movs);
+      render();
+    }
+
+    // ------- Cuadre del mes -------
+    function openCuadre(){
+      localStorage.setItem('inv_cuadre_ref', new Date().toISOString());
+      window.open('reporte.html', '_blank'); // usa tu nombre de reporte
+    }
+
+    // ------- Export -------
+    function exportCSV(){
+      const header = ["SKU","Nombre","Linea","Categoria","Lote","Vence","Stock","Min","Costo","Precio","Margen%","StockCosto","StockVenta"];
+      const rows = Array.from(document.querySelectorAll("#tabla tbody tr")).map(tr=>{
+        return Array.from(tr.children).slice(0,13).map(td=>td.innerText.trim());
+      });
+      const csv = [header, ...rows].map(r=>r.map(c=>`"${String(c).replaceAll('"','""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "inventario_teretortas.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // Listeners
+    [q, fLinea, fCat].forEach(c => c.addEventListener("input", render));
+    document.getElementById("btnIngreso").addEventListener("click",()=>promptMove('ingreso'));
+    document.getElementById("btnEgreso").addEventListener("click",()=>promptMove('egreso'));  // consumo/venta
+    document.getElementById("btnMerma").addEventListener("click",()=>promptMove('merma'));
+    document.getElementById("btnCSV").addEventListener("click",exportCSV);
+    document.getElementById("btnCuadre").addEventListener("click",openCuadre);
+
+    render();
+
+    // Marca activo si quitas <b>
+    document.querySelectorAll('header nav a').forEach(a=>{
+      const href = a.getAttribute('href') || '';
+      if (location.pathname.endsWith(href)) a.classList.add('active');
+    });
+  </script>
+</body>
+</html>

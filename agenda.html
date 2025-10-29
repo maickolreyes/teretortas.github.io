@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teretortas y Más · Agenda (Admin)</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border,#e5e7eb);border-radius:12px;overflow:hidden}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--border,#e5e7eb);text-align:left;font-size:14px}
+    th{background:#f8fafc;font-weight:800;font-size:12px;letter-spacing:.04em;color:#374151;position:sticky;top:0}
+    tr:last-child td{border-bottom:none}
+    .pill{padding:2px 8px;border-radius:999px;font-size:12px}
+    .ok{background:#dcfce7;color:#065f46}
+    .warn{background:#fef9c3;color:#854d0e}
+    .info{background:#e0f2fe;color:#075985}
+    footer .links a{margin-left:10px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container brand">
+      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+      <div>
+        <h1>Agenda (Admin)</h1>
+        <nav class="note">
+          <a href="index.html">Inicio</a>
+          <a href="arma_tu_torta.html">Arma tu torta</a>
+          <a href="agenda.html" class="active"><b>Agenda</b></a>
+          <a href="inventario.html">Inventario</a>
+        </nav>
+        <div class="note">Cupos/slots y estado de órdenes (demo local).</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="toolbar">
+      <label>Fecha: <input type="date" id="f" /></label>
+      <button class="btn" id="add">Agregar orden demo</button>
+    </div>
+
+    <div style="overflow:auto; max-height:65vh">
+      <table id="t">
+        <thead>
+          <tr>
+            <th>Orden</th><th>Cliente</th><th>Fecha</th><th>Hora</th>
+            <th>Producto</th><th>Estado</th><th>Notas</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>© Teretortas y Más · Demo</span>
+      <span class="links">
+        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    const tb = document.querySelector('#t tbody');
+    const f = document.getElementById('f');
+    f.valueAsDate = new Date();
+
+    const LS = 'tt_agenda_v1';
+    function load(){ return JSON.parse(localStorage.getItem(LS)||'[]'); }
+    function save(x){ localStorage.setItem(LS, JSON.stringify(x)); }
+
+    function render(){
+      const data = load().filter(r=>r.fecha===f.value);
+      tb.innerHTML = '';
+      data.forEach(r=>{
+        const tr = document.createElement('tr');
+        const pill = (st)=>{
+          const map = {Recibida:'info', Producción:'warn', Lista:'ok', Entregada:'ok'};
+          return `<span class="pill ${map[st]||'info'}">${st}</span>`;
+        };
+        tr.innerHTML = `
+          <td>${r.orden}</td>
+          <td>${r.cliente}</td>
+          <td>${r.fecha}</td>
+          <td>${r.hora}</td>
+          <td>${r.producto}</td>
+          <td>${pill(r.estado)}</td>
+          <td>${r.notas||''}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    document.getElementById('add').onclick = ()=>{
+      const all = load();
+      const n = all.length + 1;
+      const horas = ['10:00','12:00','15:00','17:00','19:00'];
+      const h = horas[Math.floor(Math.random()*horas.length)];
+      all.push({
+        orden:`TT-${String(n).padStart(4,'0')}`,
+        cliente:'Cliente Demo',
+        fecha:f.value,
+        hora:h,
+        producto:'Torta personalizada 16p',
+        estado:['Recibida','Producción','Lista','Entregada'][Math.floor(Math.random()*4)],
+        notas:'Sin gluten, mensaje “Feliz día”'
+      });
+      save(all); render();
+    };
+
+    f.addEventListener('change', render);
+    render();
+
+    document.querySelectorAll('header nav a').forEach(a=>{
+      const href = a.getAttribute('href') || '';
+      if (location.pathname.endsWith(href)) a.classList.add('active');
+    });
+  </script>
+</body>
+</html>

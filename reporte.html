@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teretortas y Más · Reporte de Inventario (Demo)</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Chart.js para los gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin:16px 0}
+    @media (max-width:1280px){.kpis{grid-template-columns:repeat(4,1fr)}}
+    @media (max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}
+    .kpi b{font-size:20px;display:block}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+    th{background:#f8fafc;font-weight:800;font-size:12px;letter-spacing:.04em;color:#374151}
+    tr:last-child td{border-bottom:none}
+    .right{text-align:right}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  </style>
+<style>
+  footer .links a { margin-left: 10px; }
+</style>
+
+</head>
+<!-- === Footer (unificado) === -->
+
+<body>
+  <header>
+    <div class="container brand">
+      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+      <div>
+        <h1>Reporte de Inventario · Cuadre del mes</h1>
+        <nav class="note">
+          <a href="inventario.html">← Volver a Inventario</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="toolbar">
+      <label>Mes:
+        <input type="month" id="pickMes" />
+      </label>
+      <button class="btn" id="btnCSV">Exportar CSV</button>
+      <span class="note" id="demoNote"></span>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><small>Mes</small><b id="k_mes">—</b></div>
+      <div class="kpi"><small>Ingresos (u)</small><b id="k_ing_u">0</b></div>
+      <div class="kpi"><small>Consumos/Ventas (u)</small><b id="k_egr_u">0</b></div>
+      <div class="kpi"><small>Merma (u)</small><b id="k_mer_u">0</b></div>
+      <div class="kpi"><small>Compras (costo)</small><b id="k_cost_ing">$0</b></div>
+      <div class="kpi"><small>Consumos/Ventas ($)</small><b id="k_val_egr">$0</b></div>
+      <div class="kpi"><small>Merma (costo)</small><b id="k_cost_mer">$0</b></div>
+    </div>
+
+    <!-- Gráfico -->
+    <section class="card" style="padding:12px">
+      <h2 style="font-size:16px;margin:6px 0 12px">Totales del mes por tipo ($ CLP)</h2>
+      <canvas id="chartMes" height="90"></canvas>
+    </section>
+
+    <!-- Tabla detalle -->
+    <section class="card" style="padding:12px;margin-top:12px">
+      <h2 style="font-size:16px;margin:6px 0 12px">Detalle por SKU</h2>
+      <div style="overflow:auto;max-height:60vh">
+      <table id="tabla">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Nombre</th>
+            <th class="right">Ing.</th>
+            <th class="right">Egr./Cons.</th>
+            <th class="right">Merma</th>
+            <th class="right">Stock final</th>
+            <th class="right">Costo unit.</th>
+            <th class="right">Precio unit.</th>
+            <th class="right">Compras (costo)</th>
+            <th class="right">Consumos ($)</th>
+            <th class="right">Merma (costo)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <div class="note" style="margin-top:8px">*Stock inicial estimado = Stock final − Ingresos + Egresos + Merma (no hay snapshot real en este demo).</div>
+    </section>
+  </div>
+
+  <script>
+    // === Config ===
+    const AUTO_SEMILLA_DEMO_SI_NO_HAY_MOVS = true;
+
+    // === Utilidades ===
+    const clp = n => n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+    const items = JSON.parse(localStorage.getItem('inv_items_v1') || '[]');
+    function getMovs(){ return JSON.parse(localStorage.getItem('inv_movs_v1') || '[]'); }
+    function saveMovs(m){ localStorage.setItem('inv_movs_v1', JSON.stringify(m)); }
+
+    // Mes seleccionado (por defecto: el de inv_cuadre_ref o el actual)
+    const refISO = localStorage.getItem('inv_cuadre_ref') || new Date().toISOString();
+    const ref = new Date(refISO);
+    const pick = document.getElementById('pickMes');
+    pick.value = `${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}`;
+    document.getElementById('k_mes').textContent = ref.toLocaleDateString('es-CL',{year:'numeric',month:'long'});
+
+    function rangoMes(dateObj){
+      const y = dateObj.getFullYear(), m = dateObj.getMonth();
+      const ini = new Date(y, m, 1);
+      const fin = new Date(y, m+1, 0, 23,59,59,999);
+      return {ini, fin};
+    }
+
+    // === Semilla demo si el mes está vacío ===
+    function semillaDemoSiHaceFalta(dateObj){
+      if(!AUTO_SEMILLA_DEMO_SI_NO_HAY_MOVS) return {usandoDemo:false};
+      const {ini, fin} = rangoMes(dateObj);
+      const all = getMovs();
+      const mes = all.filter(m=>{ const d = new Date(m.fecha); return d>=ini && d<=fin; });
+
+      if(mes.length>0) return {usandoDemo:false};
+
+      const skus = items.slice(0, Math.min(6, items.length)); // toma algunos
+      const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+      const fechasDentro = (n)=>Array.from({length:n},()=> new Date(ini.getFullYear(), ini.getMonth(), rnd(1, Math.min(28, fin.getDate())), rnd(8,18), rnd(0,59)).toISOString());
+
+      const nuevos = [];
+      skus.forEach(it=>{
+        // 2 ingresos chicos en el mes
+        fechasDentro(2).forEach(f=>{
+          nuevos.push({fecha:f, sku:it.sku, nombre:it.nombre, tipo:'ingreso', qty:rnd(1,4), costo:it.costo, precio:it.precio||0});
+        });
+        // 3 egresos/consumos (ventas/producción)
+        fechasDentro(3).forEach(f=>{
+          nuevos.push({fecha:f, sku:it.sku, nombre:it.nombre, tipo:'egreso', qty:rnd(1,5), costo:it.costo, precio:it.precio||0});
+        });
+        // 1 merma opcional
+        if(Math.random()<0.5){
+          fechasDentro(1).forEach(f=>{
+            nuevos.push({fecha:f, sku:it.sku, nombre:it.nombre, tipo:'merma', qty:rnd(1,2), costo:it.costo, precio:it.precio||0});
+          });
+        }
+      });
+
+      saveMovs([...all, ...nuevos]);
+      document.getElementById('demoNote').textContent = 'Se cargaron datos ficticios para este mes (solo para demo).';
+      return {usandoDemo:true};
+    }
+
+    // === Cálculo y render ===
+    let chart;
+    function recalcularYRender(){
+      const y = Number(pick.value.slice(0,4));
+      const m = Number(pick.value.slice(5,7)) - 1;
+      const fechaRef = new Date(y, m, 1);
+      document.getElementById('k_mes').textContent = fechaRef.toLocaleDateString('es-CL',{year:'numeric',month:'long'});
+
+      semillaDemoSiHaceFalta(fechaRef);
+
+      const {ini, fin} = rangoMes(fechaRef);
+      const movs = getMovs().filter(m=>{ const d = new Date(m.fecha); return d>=ini && d<=fin; });
+
+      // Índice por SKU
+      const idx = {};
+      items.forEach(it=>{
+        idx[it.sku] = { sku:it.sku, nombre:it.nombre, costo:it.costo, precio:it.precio||0,
+                        ing:0, egr:0, mer:0, stockFinal:it.stock };
+      });
+      movs.forEach(m=>{
+        const row = idx[m.sku] || (idx[m.sku] = {sku:m.sku, nombre:m.nombre||m.sku, costo:m.costo||0, precio:m.precio||0, ing:0, egr:0, mer:0, stockFinal:0});
+        if(m.tipo==='ingreso') row.ing += m.qty;
+        if(m.tipo==='egreso')  row.egr += m.qty;
+        if(m.tipo==='merma')   row.mer += m.qty;
+      });
+
+      // KPIs y tabla
+      let ingU=0, egrU=0, merU=0, comprCosto=0, consuVal=0, merCosto=0;
+      const tbody = document.querySelector('#tabla tbody');
+      tbody.innerHTML = '';
+
+      Object.values(idx).forEach(r=>{
+        ingU += r.ing; egrU += r.egr; merU += r.mer;
+        comprCosto += r.ing * (r.costo||0);
+        consuVal   += r.egr * (r.precio||0);
+        merCosto   += r.mer * (r.costo||0);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${r.sku}</td>
+          <td>${r.nombre}</td>
+          <td class="right">${r.ing}</td>
+          <td class="right">${r.egr}</td>
+          <td class="right">${r.mer}</td>
+          <td class="right">${r.stockFinal}</td>
+          <td class="right">${clp(r.costo||0)}</td>
+          <td class="right">${r.precio?clp(r.precio):'—'}</td>
+          <td class="right">${clp(r.ing*(r.costo||0))}</td>
+          <td class="right">${r.precio?clp(r.egr*(r.precio||0)):'—'}</td>
+          <td class="right">${clp(r.mer*(r.costo||0))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('k_ing_u').textContent = ingU;
+      document.getElementById('k_egr_u').textContent = egrU;
+      document.getElementById('k_mer_u').textContent = merU;
+      document.getElementById('k_cost_ing').textContent = clp(comprCosto);
+      document.getElementById('k_val_egr').textContent = clp(consuVal);
+      document.getElementById('k_cost_mer').textContent = clp(merCosto);
+
+      // Gráfico barras
+      const ctx = document.getElementById('chartMes').getContext('2d');
+      if(chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Compras (costo)', 'Consumos/Ventas ($)', 'Merma (costo)'],
+          datasets: [{
+            label: 'Totales del mes',
+            data: [comprCosto, consuVal, merCosto]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display:false },
+            tooltip: { callbacks: { label: (ctx)=> ' ' + clp(ctx.raw) } }
+          },
+          scales: {
+            y: { ticks: { callback: (v)=> clp(v) } }
+          }
+        }
+      });
+    }
+
+    // Export CSV tabla detalle
+    document.getElementById('btnCSV').addEventListener('click', ()=>{
+      const header = ["SKU","Nombre","Ingresos","Egresos/Consumos","Merma","StockFinal","CostoUnit","PrecioUnit","ComprasCosto","Consumos$","MermaCosto"];
+      const rows = Array.from(document.querySelectorAll("#tabla tbody tr")).map(tr=>{
+        return Array.from(tr.children).map(td=>td.innerText.trim());
+      });
+      const csv = [header, ...rows].map(r=>r.map(c=>`"${String(c).replaceAll('"','""')}"`).join(",")).join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8;"}));
+      const ym = pick.value || 'mes';
+      a.download = `reporte_cuadre_${ym}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // Listeners
+    pick.addEventListener('change', recalcularYRender);
+
+    // Init
+    recalcularYRender();
+  </script>
+
+<footer>
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+    <span>© Teretortas y Más · Demo</span>
+    <span class="links">
+      <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+      <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+      <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+    </span>
+  </div>
+</footer>
+</body>
+</html>
