@@ -42,33 +42,132 @@
   </header>
 
   <main class="wrap">
-    <!-- 1) Tamaño y sabor -->
-    <section class="card">
-      <h2>1) Tamaño y sabor</h2>
-      <div class="grid">
-        <div>
-          <label for="tamano">Tamaño</label>
-          <select id="tamano">
-            <option value="12p" data-price="15990">12 porciones</option>
-            <option value="16p" data-price="19990">16 porciones</option>
-            <option value="20p" data-price="25990">20 porciones</option>
-            <option value="30p" data-price="35990">30 porciones</option>
-          </select>
-        </div>
-        <div>
-          <label for="sabor">Sabor del bizcocho</label>
-          <select id="sabor">
-            <option value="vainilla" data-price="0">Vainilla</option>
-            <option value="chocolate" data-price="1200">Chocolate</option>
-            <option value="red_velvet" data-price="1800">Red Velvet</option>
-            <option value="zanahoria" data-price="1500">Zanahoria</option>
-            <option value="vegano" data-price="2000" data-tag="veg">Vainilla vegana</option>
-            <option value="sin_gluten" data-price="2500" data-tag="sg">Vainilla sin gluten</option>
-            <option value="sin_azucar" data-price="2500" data-tag="sz">Vainilla sin azúcar</option>
-          </select>
-        </div>
+    <!-- ============ 1) TAMAÑO Y SABOR (REEMPLAZO) ============ -->
+<section id="step1" class="card" style="margin-top:8px">
+  <h2>1) Tamaño y sabor</h2>
+
+  <div class="note" style="margin:-6px 0 12px">
+    Selecciona el tamaño (porciones/diámetro/capas) y el sabor del bizcocho. Puedes marcar necesidades dietarias.
+  </div>
+
+  <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Tamaño -->
+    <div>
+      <label for="size">Tamaño</label>
+      <select id="size" name="size">
+        <!-- value = código interno -->
+        <option value="T12" data-porciones="12" data-diametro="18 cm" data-capas="2">12 porciones · Ø18 cm · 2 capas</option>
+        <option value="T16" data-porciones="16" data-diametro="22 cm" data-capas="2">16 porciones · Ø22 cm · 2 capas</option>
+        <option value="T20" data-porciones="20" data-diametro="24 cm" data-capas="3">20 porciones · Ø24 cm · 3 capas</option>
+        <option value="T24" data-porciones="24" data-diametro="26 cm" data-capas="3">24 porciones · Ø26 cm · 3 capas</option>
+        <option value="T30" data-porciones="30" data-diametro="30 cm" data-capas="3">30 porciones · Ø30 cm · 3 capas</option>
+      </select>
+      <p class="note" id="sizeMeta" style="margin:.35rem 0 0"></p>
+    </div>
+
+    <!-- Sabor bizcocho -->
+    <div>
+      <label for="flavor">Sabor del bizcocho</label>
+      <select id="flavor" name="flavor">
+        <option value="VAN" data-delta="0">Vainilla</option>
+        <option value="CHO" data-delta="1500">Chocolate (+$1.500)</option>
+        <option value="RED" data-delta="2500">Red Velvet (+$2.500)</option>
+        <option value="ZAN" data-delta="1500">Zanahoria (+$1.500)</option>
+        <option value="LIM" data-delta="1000">Limón (+$1.000)</option>
+      </select>
+      <p class="note" style="margin:.35rem 0 0">El ajuste de precio del sabor se suma al precio base del tamaño.</p>
+    </div>
+  </div>
+
+  <!-- Necesidades dietarias -->
+  <div style="margin-top:12px">
+    <label>Necesidades dietarias (opcional)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label class="pill"><input type="checkbox" id="tag_veg"  style="margin-right:6px"> Vegano</label>
+      <label class="pill"><input type="checkbox" id="tag_saz"  style="margin-right:6px"> Sin azúcar</label>
+      <label class="pill"><input type="checkbox" id="tag_sgl"  style="margin-right:6px"> Sin gluten</label>
+    </div>
+    <p class="note" style="margin:.35rem 0 0">Si marcas una o más, filtraremos rellenos/coberturas compatibles en los pasos siguientes.</p>
+  </div>
+
+  <!-- Resumen dinámico -->
+  <div class="card" style="margin-top:14px;background:#fcfcfd">
+    <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+      <div>
+        <div class="note">SKU preliminar</div>
+        <div id="skuPreview" class="mono" style="font-weight:700">–</div>
       </div>
-    </section>
+      <div>
+        <div class="note">Precio base estimado</div>
+        <div id="pricePreview" style="font-size:1.25rem;font-weight:800">$0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <script>
+/* ====== Lógica básica del paso 1: precio y SKU ====== */
+(function(){
+  // Precios base por tamaño (CLP)
+  const SIZE_BASE = {
+    T12: 15990,
+    T16: 18990,
+    T20: 22990,
+    T24: 25990,
+    T30: 31990
+  };
+
+  const $size   = document.getElementById('size');
+  const $flavor = document.getElementById('flavor');
+  const $sizeMeta = document.getElementById('sizeMeta');
+  const $price = document.getElementById('pricePreview');
+  const $sku   = document.getElementById('skuPreview');
+
+  function money(n){
+    return n.toLocaleString('es-CL', {style:'currency', currency:'CLP', maximumFractionDigits:0});
+  }
+
+  function updateMeta(){
+    const opt = $size.selectedOptions[0];
+    const p = opt.dataset.porciones, d = opt.dataset.diametro, c = opt.dataset.capas;
+    $sizeMeta.textContent = `${p} porciones · ${d} · ${c} capas`;
+  }
+
+  function updateSummary(){
+    const sizeCode = $size.value;
+    const flavorOpt = $flavor.selectedOptions[0];
+    const flavorCode = flavorOpt.value;
+    const delta = Number(flavorOpt.dataset.delta || 0);
+
+    // Precio
+    const base = SIZE_BASE[sizeCode] || 0;
+    const total = base + delta;
+    $price.textContent = money(total);
+
+    // SKU preliminar: Txx-<FLV>
+    const sku = `${sizeCode}-${flavorCode}`;
+    $sku.textContent = sku;
+
+    // Guardado temporal por si quieres usar después
+    sessionStorage.setItem('ttm_step1', JSON.stringify({
+      size: sizeCode,
+      flavor: flavorCode,
+      priceBase: base,
+      deltaFlavor: delta,
+      priceTotal: total
+    }));
+  }
+
+  $size.addEventListener('change', ()=>{ updateMeta(); updateSummary(); });
+  $flavor.addEventListener('change', updateSummary);
+
+  // Init
+  updateMeta();
+  updateSummary();
+})();
+</script>
+
+    
 
     <!-- 2) Rellenos y coberturas -->
     <section class="card">
@@ -257,3 +356,4 @@
   </script>
 </body>
 </html>
+
