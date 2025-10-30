@@ -160,16 +160,40 @@
 </section>
 
     <!-- 3) Extras -->
-    <section class="card">
-      <h2>3) Extras</h2>
-      <div class="grid">
-        <label><input type="checkbox" class="extra" data-name="Velas" data-price="800"> Velas</label>
-        <label><input type="checkbox" class="extra" data-name="Toppers" data-price="2500"> Toppers</label>
-        <label><input type="checkbox" class="extra" data-name="Mini galletas" data-price="3000"> Mini galletas</label>
-        <label><input type="checkbox" class="extra" data-name="Mensaje en chocolate" data-price="1200"> Mensaje en chocolate</label>
-      </div>
-      <p class="note">Los extras se agregan al total y aparecen como etiquetas.</p>
-    </section>
+<section class="card">
+  <h2>3) Extras</h2>
+  <div class="grid" id="extras-list">
+    <!-- cada extra: data-name (para el resumen) y data-price en CLP -->
+    <label>
+      <input type="checkbox" class="extra" data-name="Velas" data-price="800">
+      Velas <span class="price-tag"></span>
+    </label>
+    <label>
+      <input type="checkbox" class="extra" data-name="Toppers" data-price="2500">
+      Toppers <span class="price-tag"></span>
+    </label>
+    <label>
+      <input type="checkbox" class="extra" data-name="Mini galletas" data-price="3000">
+      Mini galletas <span class="price-tag"></span>
+    </label>
+    <label>
+      <input type="checkbox" class="extra" data-name="Mensaje en chocolate" data-price="1200">
+      Mensaje en chocolate <span class="price-tag"></span>
+    </label>
+
+    <!-- puedes seguir agregando aquí abajo -->
+    <label>
+      <input type="checkbox" class="extra" data-name="Flores comestibles" data-price="4500">
+      Flores comestibles <span class="price-tag"></span>
+    </label>
+    <label>
+      <input type="checkbox" class="extra" data-name="Caja regalo" data-price="2000">
+      Caja regalo <span class="price-tag"></span>
+    </label>
+  </div>
+  <p class="note">Los extras se agregan al total y aparecen como etiquetas.</p>
+</section>
+
 
     <!-- 4) Notas -->
     <section class="card">
@@ -445,11 +469,153 @@
 })();
 </script>
 
+  <script>
+(function(){
+  const extrasEls = Array.from(document.querySelectorAll('.extra'));
+  const $totalFinal = document.getElementById('total');
+  const $badges     = document.getElementById('badges');
+  const $summary    = document.getElementById('summary');
+  const $skuFinal   = document.getElementById('sku');
+  const $notas      = document.getElementById('notas');
+
+  let s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+  let s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
+
+  function money(n){
+    return (n||0).toLocaleString('es-CL', {
+      style:'currency',
+      currency:'CLP',
+      maximumFractionDigits:0
+    });
+  }
+
+  // ⬇⬇ NUEVO: mostrar precio en el HTML al lado de cada extra
+  extrasEls.forEach(el => {
+    const price = Number(el.dataset.price || 0);
+    const span = el.parentElement.querySelector('.price-tag');
+    if (span) {
+      span.textContent = price ? ` (${money(price)})` : '';
+    }
+  });
+
+  function getExtrasSelected(){
+    return extrasEls
+      .filter(e => e.checked)
+      .map(e => ({
+        name: e.dataset.name,
+        price: Number(e.dataset.price || 0)
+      }));
+  }
+
+  function updateStep3(){
+    const extras = getExtrasSelected();
+    const extrasTotal = extras.reduce((acc,x)=>acc + x.price, 0);
+
+    const baseTotal = Number(s2?.priceTotal || s1?.priceTotal || 0);
+    const finalTotal = baseTotal + extrasTotal;
+
+    const lines = [];
+    lines.push(`Tamaño: ${s1.size || '—'}`);
+    lines.push(`Marco/base: ${s1.base || '—'}`);
+    lines.push(`Bizcocho: ${s1.flavor || '—'}`);
+    lines.push(`Relleno 1: ${s2.fill1 || '—'}`);
+    lines.push(`Relleno 2: ${s2.fill2 || '—'}`);
+    lines.push(`Cobertura: ${s2.cover || '—'}`);
+    if (extras.length){
+      lines.push('Extras: ' + extras.map(e => `${e.name} (+${money(e.price)})`).join(', '));
+    }
+    const notasTxt = $notas.value?.trim();
+    if (notasTxt) lines.push('Notas: ' + notasTxt);
+
+    $summary.innerHTML = lines.map(l => `<li>${l}</li>`).join('');
+
+    const badges = [];
+    if (s1.base === 'SAZ') badges.push('Sin azúcar');
+    if (s1.base === 'SGL' || s1.base === 'ISG' || s1.base === 'VGS') badges.push('Sin gluten');
+    if (s1.base === 'VEG' || s1.base === 'VGS') badges.push('Vegano');
+    extras.forEach(e => badges.push(e.name));
+    $badges.innerHTML = badges.map(b => `<span class="pill">${b}</span>`).join('');
+
+    $totalFinal.textContent = money(finalTotal);
+
+    const skuStep2 = (s1.size || 'T??') + '-' + (s1.base || '???') + '-' + (s1.flavor || '???')
+                   + '-' + (s2.fill1 || 'NR') + (s2.fill2 || '') + '-' + (s2.cover || 'NC');
+    const skuExtras = extras.length ? '-EX' + extras.length : '';
+    $skuFinal.textContent = 'SKU: ' + skuStep2 + skuExtras;
+
+    sessionStorage.setItem('ttm_step3', JSON.stringify({
+      extras,
+      notas: notasTxt,
+      priceExtras: extrasTotal,
+      priceTotal: finalTotal
+    }));
+  }
+
+  window.addEventListener('ttm:s2-change', (ev) => {
+    s2 = ev.detail || s2;
+    updateStep3();
+  });
+
+  extrasEls.forEach(el => el.addEventListener('change', updateStep3));
+  $notas.addEventListener('input', updateStep3);
+
+  const btnAdd  = document.getElementById('btnAdd');
+  const btnNext = document.getElementById('btnNext');
+
+  if (btnAdd){
+    btnAdd.addEventListener('click', () => {
+      const p3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
+      alert('Pedido añadido (demo):\n' + JSON.stringify(p3, null, 2));
+    });
+  }
+  if (btnAdd){
+  btnAdd.addEventListener('click', () => {
+    const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+    const s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
+    const s3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
+
+    // validaciones simples
+    const errs = [];
+    if (!s1.size) errs.push('Falta seleccionar el tamaño.');
+    if (!s1.base) errs.push('Falta seleccionar el marco/base.');
+    if (!s1.flavor) errs.push('Falta seleccionar el sabor.');
+    if (!s2.cover) errs.push('Falta seleccionar la cobertura.');
+
+    if (errs.length){
+      alert('No se puede guardar el pedido:\n- ' + errs.join('\n- '));
+      return;
+    }
+
+    const order = {
+      cliente: 'demo',          // esto lo vamos a llenar en agenda
+      paso1: s1,
+      paso2: s2,
+      paso3: s3,
+      total: s3.priceTotal || s2.priceTotal || s1.priceTotal || 0,
+      createdAt: new Date().toISOString()
+    };
+
+    // guardar en una lista de pedidos locales (por si queremos leerla en la agenda)
+    const list = JSON.parse(sessionStorage.getItem('ttm_orders') || '[]');
+    list.push(order);
+    sessionStorage.setItem('ttm_orders', JSON.stringify(list));
+
+    alert('Pedido guardado (demo):\n' + JSON.stringify(order, null, 2));
+  });
+}
+
+
+  updateStep3();
+})();
+</script>
+
+
 
   
   
 </body>
 </html>
+
 
 
 
