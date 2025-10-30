@@ -250,6 +250,10 @@
       deltaFlavor: flavorDelta,
       priceTotal: total
     }));
+
+    window.dispatchEvent(new CustomEvent('ttm:s1-change', {
+      detail: JSON.parse(sessionStorage.getItem('ttm_step1'))
+    }));
   }
 
   [$size,$base,$flavor].forEach(el => el.addEventListener('change', updateSummary));
@@ -257,6 +261,10 @@
   // init
   updateMeta();
   updateSummary();
+
+  window.dispatchEvent(new CustomEvent('ttm:s1-change', {
+    detail: JSON.parse(sessionStorage.getItem('ttm_step1'))
+  }));
 
   // Responsivo simple para 2 columnas en pantallas medianas
   const grid = document.querySelector('#step1 .grid');
@@ -270,7 +278,8 @@
 /* ====== Paso 2: catálogo, filtros y precio ====== */
 (function(){
   // Leer lo seleccionado en paso 1
-  const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+  let s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+
   // Mapa de restricciones derivadas del MARCO (base)
   // Flags: v=vegano, s=sugar-free, g=gluten-free
   const RESTR_FOR_BASE = {
@@ -313,6 +322,19 @@
   const $cvm = document.getElementById('coverMeta');
   const $sku = document.getElementById('skuStep2');
   const $price= document.getElementById('priceStep2');
+
+  // Escuchar cambios del Paso 1 en tiempo real
+  window.addEventListener('ttm:s1-change', (ev) => {
+    const prevBase = s1.base;
+    s1 = ev.detail || s1;
+
+    // Si cambió el MARCO/base, hay que volver a renderizar opciones compatibles
+    if (s1.base !== prevBase) {
+      renderOptions();          // reconstruye fill1/fill2/cover según compatibilidad
+    }
+      updateSummary();            // recalcula SKU y total con el nuevo priceTotal
+  });
+
 
   function money(n){ return (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
 
@@ -411,6 +433,7 @@
   resp(); mq2.addEventListener('change', resp);
 })();
 </script>
+
   
   <script>
     const q = sel => document.querySelector(sel);
@@ -493,6 +516,7 @@
   </script>
 </body>
 </html>
+
 
 
 
