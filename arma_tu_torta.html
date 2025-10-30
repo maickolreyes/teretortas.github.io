@@ -275,25 +275,23 @@
 </script>
 
   <script>
-/* ====== Paso 2: catálogo, filtros y precio ====== */
+/* ====== Paso 2: catálogo, filtros y precio (CORREGIDO) ====== */
 (function(){
-  // Leer lo seleccionado en paso 1
+  // 1. estado actual del paso 1
   let s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
 
-  // Mapa de restricciones derivadas del MARCO (base)
-  // Flags: v=vegano, s=sugar-free, g=gluten-free
+  // 2. mapa de restricciones
   const RESTR_FOR_BASE = {
     TRD: {v:false, s:false, g:false},
     SAZ: {v:false, s:true,  g:false},
     SGL: {v:false, s:false, g:true },
-    INT: {v:false, s:false, g:false},           // integral sin restricción
-    ISG: {v:false, s:false, g:true },           // integral sin gluten
+    INT: {v:false, s:false, g:false},
+    ISG: {v:false, s:false, g:true },
     VEG: {v:true,  s:false, g:false},
-    VGS: {v:true,  s:false, g:true }            // vegano + sin gluten
+    VGS: {v:true,  s:false, g:true }
   };
-  const need = RESTR_FOR_BASE[s1.base] || {v:false,s:false,g:false};
 
-  // Catálogo (puedes editar precios/compatibilidades)
+  // 3. catálogos
   const FILLS = [
     {code:'MUS', name:'Mousse de chocolate',    price:2500, v:true,  s:false, g:true },
     {code:'DLC', name:'Dulce de leche',         price:1500, v:true,  s:false, g:true },
@@ -314,41 +312,37 @@
     {code:'VGN', name:'Buttercream vegano',     price:2200, v:true,  s:true,  g:true }
   ];
 
+  // 4. refs
   const $fill1 = document.getElementById('fill1');
   const $fill2 = document.getElementById('fill2');
   const $cover = document.getElementById('cover');
-  const $f1m = document.getElementById('fill1Meta');
-  const $f2m = document.getElementById('fill2Meta');
-  const $cvm = document.getElementById('coverMeta');
-  const $sku = document.getElementById('skuStep2');
-  const $price= document.getElementById('priceStep2');
-
-  // Escuchar cambios del Paso 1 en tiempo real
-  window.addEventListener('ttm:s1-change', (ev) => {
-    const prevBase = s1.base;
-    s1 = ev.detail || s1;
-
-    // Si cambió el MARCO/base, hay que volver a renderizar opciones compatibles
-    if (s1.base !== prevBase) {
-      renderOptions();          // reconstruye fill1/fill2/cover según compatibilidad
-    }
-      updateSummary();            // recalcula SKU y total con el nuevo priceTotal
-  });
-
+  const $f1m   = document.getElementById('fill1Meta');
+  const $f2m   = document.getElementById('fill2Meta');
+  const $cvm   = document.getElementById('coverMeta');
+  const $sku   = document.getElementById('skuStep2');
+  const $price = document.getElementById('priceStep2');
 
   function money(n){ return (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
 
-  // Helper: ¿item es compatible con las necesidades del marco?
+  // ===== helper de compatibilidad (usa s1.base ACTUAL) =====
+  function getNeed(){
+    return RESTR_FOR_BASE[s1.base] || {v:false,s:false,g:false};
+  }
   function compatible(item){
+    const need = getNeed();
     if (need.v && !item.v) return false;
     if (need.s && !item.s) return false;
     if (need.g && !item.g) return false;
     return true;
   }
 
-  // Render de selects según compatibilidad
+  // ===== render =====
   function renderOptions(){
-    // Relleno 1
+    const prevF1 = $fill1.value;
+    const prevF2 = $fill2.value;
+    const prevCv = $cover.value;
+
+    // relleno 1
     $fill1.innerHTML = '';
     FILLS.filter(compatible).forEach(f=>{
       const opt = document.createElement('option');
@@ -358,7 +352,7 @@
       $fill1.appendChild(opt);
     });
 
-    // Relleno 2 (con opción vacía)
+    // relleno 2
     $fill2.innerHTML = '<option value="">— Sin segundo relleno —</option>';
     FILLS.filter(compatible).forEach(f=>{
       const opt = document.createElement('option');
@@ -368,7 +362,7 @@
       $fill2.appendChild(opt);
     });
 
-    // Coberturas
+    // cobertura
     $cover.innerHTML = '';
     COVERS.filter(compatible).forEach(c=>{
       const opt = document.createElement('option');
@@ -377,6 +371,11 @@
       opt.dataset.price = c.price;
       $cover.appendChild(opt);
     });
+
+    // restaurar si aún existen
+    if ([...$fill1.options].some(o=>o.value===prevF1)) $fill1.value = prevF1;
+    if ([...$fill2.options].some(o=>o.value===prevF2)) $fill2.value = prevF2;
+    if ([...$cover.options].some(o=>o.value===prevCv)) $cover.value = prevCv;
   }
 
   function metaText(code, list){
@@ -389,8 +388,7 @@
     const f2 = $fill2.value || '';
     const cv = $cover.value;
 
-    // evitar mismo relleno duplicado (opcional)
-    if (f1 && f2 && f1===f2){
+    if (f1 && f2 && f1 === f2){
       $fill2.value = '';
       return updateSummary();
     }
@@ -403,30 +401,43 @@
     const p2 = Number($fill2.selectedOptions[0]?.dataset.price || 0);
     const pc = Number($cover.selectedOptions[0]?.dataset.price || 0);
 
-    // total acumulado = paso1.priceTotal + sumas de paso2
     const baseTotal = Number(s1?.priceTotal || 0);
-    const total = baseTotal + p1 + p2 + pc;
+    const total     = baseTotal + p1 + p2 + pc;
     $price.textContent = money(total);
 
-    // SKU: <paso1 SKU> - <R1><R2>-<COV>
     const sku_s1 = `${s1?.size || 'T??'}-${s1?.base || '???'}-${s1?.flavor || '???'}`;
     const sku_s2 = `${f1 || 'NR'}${f2 || ''}-${cv || 'NC'}`;
     $sku.textContent = `${sku_s1}-${sku_s2}`;
 
-    // Guardar paso 2
+    // guardar paso 2
     sessionStorage.setItem('ttm_step2', JSON.stringify({
       fill1: f1, fill2: f2, cover: cv,
       priceFill1: p1, priceFill2: p2, priceCover: pc,
       priceTotal: total
     }));
+
+    // >>> emitir evento para el paso 3 <<<
+    window.dispatchEvent(new CustomEvent('ttm:s2-change', {
+      detail: JSON.parse(sessionStorage.getItem('ttm_step2'))
+    }));
   }
 
-  // Init
+  // ===== escuchar paso 1 en vivo =====
+  window.addEventListener('ttm:s1-change', (ev) => {
+    const prevBase = s1.base;
+    s1 = ev.detail || s1;
+    if (s1.base !== prevBase) {
+      renderOptions();
+    }
+    updateSummary();
+  });
+
+  // init
   renderOptions();
   [$fill1,$fill2,$cover].forEach(el=>el.addEventListener('change', updateSummary));
   updateSummary();
 
-  // Responsivo: 1–3 columnas
+  // responsivo
   const grid = document.querySelector('#step2 .grid');
   const mq2  = window.matchMedia('(max-width: 980px)');
   function resp(){ grid.style.gridTemplateColumns = mq2.matches ? '1fr' : '1fr 1fr 1fr'; }
@@ -434,88 +445,12 @@
 })();
 </script>
 
+
   
-  <script>
-    const q = sel => document.querySelector(sel);
-    const all = sel => Array.from(document.querySelectorAll(sel));
-    const CLP = n => n.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
-
-    const tamano = q('#tamano');
-    const sabor = q('#sabor');
-    const relleno = q('#relleno');
-    const relleno2 = q('#relleno2');
-    const cobertura = q('#cobertura');
-    const diseno = q('#diseno');
-    const extras = all('.extra');
-
-    function valPrice(sel){ const opt = sel.options[sel.selectedIndex]; return Number(opt?.dataset.price || 0); }
-    function valText(sel){ return sel.options[sel.selectedIndex]?.text || '—'; }
-    function valValue(sel){ return sel.value || ''; }
-    function tagOf(sel){ const opt = sel.options[sel.selectedIndex]; return opt?.dataset?.tag || ''; }
-
-    function update(){
-      let total = 0;
-      const summary = [];
-      const badges = [];
-      const skuParts = ['TT'];
-
-      total += valPrice(tamano);
-      summary.push(`Tamaño: ${valText(tamano)}`);
-      skuParts.push(valValue(tamano).toUpperCase());
-
-      total += valPrice(sabor);
-      summary.push(`Sabor: ${valText(sabor)}`);
-      const tagSabor = tagOf(sabor);
-      if(tagSabor) badges.push(tagSabor.toUpperCase());
-
-      const r1 = {v:valValue(relleno), lbl:valText(relleno), p:valPrice(relleno), tag:tagOf(relleno)};
-      const r2 = {v:valValue(relleno2), lbl:valText(relleno2), p:valPrice(relleno2), tag:tagOf(relleno2)};
-      const rellenosTot = r1.p + (r2.v ? r2.p : 0);
-      total += rellenosTot;
-
-      summary.push(`Relleno: ${r1.lbl}${r2.v ? ' + ' + r2.lbl : ''}`);
-      if(r2.v) badges.push('2 RELLENOS');
-      if(r1.tag) badges.push(r1.tag.toUpperCase());
-      if(r2.tag) badges.push(r2.tag.toUpperCase());
-      if(r2.v) skuParts.push(`R2-${r2.v.toUpperCase()}`);
-
-      total += valPrice(cobertura);
-      summary.push(`Cobertura: ${valText(cobertura)}`);
-      const tagCob = tagOf(cobertura);
-      if(tagCob) badges.push(tagCob.toUpperCase());
-
-      total += valPrice(diseno);
-      summary.push(`Diseño: ${valText(diseno)}`);
-
-      const chosenExtras = extras.filter(e=>e.checked).map(e=>({name:e.dataset.name, price:Number(e.dataset.price||0)}));
-      chosenExtras.forEach(ex => total += ex.price);
-      chosenExtras.forEach(ex => badges.push(ex.name));
-
-      q('#summary').innerHTML = summary.map(s=>`<li>${s}</li>`).join('');
-      q('#badges').innerHTML = badges.map(b=>`<span class="pill">${b}</span>`).join('');
-      q('#total').textContent = CLP(total);
-
-      const sku = [...skuParts, sabor.value.toUpperCase(), r1.v.toUpperCase()].join('-');
-      q('#sku').textContent = `SKU (demo): ${sku}`;
-    }
-
-    ['change','input'].forEach(ev => {
-      [tamano,sabor,relleno,relleno2,cobertura,diseno].forEach(el => el.addEventListener(ev, update));
-      all('.extra').forEach(el => el.addEventListener(ev, update));
-    });
-    update();
-
-    q('#btnAdd').onclick = ()=>alert('Agregado (demo).');
-    q('#btnNext').onclick = ()=>location.href='index.html';
-
-    // Marca enlace activo si quitas el <b>
-    document.querySelectorAll('header nav a').forEach(a=>{
-      const href = a.getAttribute('href') || '';
-      if (location.pathname.endsWith(href)) a.classList.add('active');
-    });
-  </script>
+  
 </body>
 </html>
+
 
 
 
