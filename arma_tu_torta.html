@@ -195,11 +195,35 @@
 </section>
 
 
-    <!-- 4) Notas -->
-    <section class="card">
-      <h2>4) Notas del pedido</h2>
-      <textarea id="notas" rows="3" placeholder="Texto de mensaje, colores, indicaciones…"></textarea>
-    </section>
+    <!-- 4) Contacto y mensaje -->
+<section class="card">
+  <h2>4) Contacto y mensaje</h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+    <div>
+      <label for="contact_name">Nombre / quién retira *</label>
+      <input type="text" id="contact_name" placeholder="Ej: Teresa Díaz" required>
+      <p class="note">Nombre para identificar el pedido.</p>
+    </div>
+    <div>
+      <label for="contact_whatsapp">WhatsApp *</label>
+      <input type="text" id="contact_whatsapp" placeholder="+56 9 1234 5678" required>
+      <p class="note">Usaremos este número para confirmar.</p>
+    </div>
+    <div>
+      <label for="contact_email">Correo (opcional)</label>
+      <input type="email" id="contact_email" placeholder="correo@ejemplo.cl">
+    </div>
+    <div>
+      <label for="contact_date">Fecha tentativa (opcional)</label>
+      <input type="date" id="contact_date">
+    </div>
+  </div>
+
+  <label for="notas" style="margin-top:12px;display:block">Mensaje / especificaciones</label>
+  <textarea id="notas" rows="3" placeholder="Texto del mensaje, colores, 'es para 12 personas', 'sin frutos secos', etc."></textarea>
+  <p class="note">Estos datos se guardan junto con la configuración de la torta.</p>
+</section>
+
 
     <!-- Resumen -->
     <section class="card">
@@ -471,6 +495,10 @@
 
   <script>
 (function(){
+  const $contactName  = document.getElementById('contact_name');
+  const $contactWhats = document.getElementById('contact_whatsapp');
+  const $contactEmail = document.getElementById('contact_email');
+  const $contactDate  = document.getElementById('contact_date');
   const extrasEls = Array.from(document.querySelectorAll('.extra'));
   const $totalFinal = document.getElementById('total');
   const $badges     = document.getElementById('badges');
@@ -521,6 +549,16 @@
     lines.push(`Relleno 1: ${s2.fill1 || '—'}`);
     lines.push(`Relleno 2: ${s2.fill2 || '—'}`);
     lines.push(`Cobertura: ${s2.cover || '—'}`);
+    if ($contactName.value.trim()) {
+      lines.push('Contacto: ' + $contactName.value.trim());
+    }
+    if ($contactWhats.value.trim()) {
+      lines.push('WhatsApp: ' + $contactWhats.value.trim());
+    }
+    if ($contactDate.value) {
+      lines.push('Fecha tentativa: ' + $contactDate.value);
+    }
+
     if (extras.length){
       lines.push('Extras: ' + extras.map(e => `${e.name} (+${money(e.price)})`).join(', '));
     }
@@ -546,9 +584,16 @@
     sessionStorage.setItem('ttm_step3', JSON.stringify({
       extras,
       notas: notasTxt,
+      contact: {
+        name:  $contactName.value.trim(),
+        whatsapp: $contactWhats.value.trim(),
+        email: $contactEmail.value.trim(),
+        date:  $contactDate.value
+      },
       priceExtras: extrasTotal,
       priceTotal: finalTotal
     }));
+
   }
 
   window.addEventListener('ttm:s2-change', (ev) => {
@@ -558,6 +603,10 @@
 
   extrasEls.forEach(el => el.addEventListener('change', updateStep3));
   $notas.addEventListener('input', updateStep3);
+  [$contactName, $contactWhats, $contactEmail, $contactDate].forEach(el=>{
+    if (el) el.addEventListener('input', updateStep3);
+  });
+
 
   const btnAdd  = document.getElementById('btnAdd');
   const btnNext = document.getElementById('btnNext');
@@ -615,6 +664,7 @@
   
 </body>
 </html>
+
 
 
 
