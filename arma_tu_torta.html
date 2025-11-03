@@ -291,8 +291,16 @@
 
     sessionStorage.setItem('ttm_step1', JSON.stringify({
       size: sizeCode,
+      sizeLabel: $size.selectedOptions[0].text,            // ← NUEVO
+      sizeMeta: {
+        porciones: $size.selectedOptions[0].dataset.porciones,
+        diametro:  $size.selectedOptions[0].dataset.diametro,
+        capas:     $size.selectedOptions[0].dataset.capas
+      },
       base: baseOpt.value,
+      baseLabel: baseOpt.text,
       flavor: flavorOpt.value,
+      flavorLabel: flavorOpt.text,
       priceSize: basePrice,
       deltaBase: baseDelta,
       deltaFlavor: flavorDelta,
@@ -459,7 +467,9 @@
 
     // guardar paso 2
     sessionStorage.setItem('ttm_step2', JSON.stringify({
-      fill1: f1, fill2: f2, cover: cv,
+      fill1: f1, fill1Label: metaText(f1, FILLS),          // ← NUEVO
+      fill2: f2, fill2Label: f2 ? metaText(f2, FILLS) : '',// ← NUEVO
+      cover: cv, coverLabel: metaText(cv, COVERS),         // ← NUEVO
       priceFill1: p1, priceFill2: p2, priceCover: pc,
       priceTotal: total
     }));
@@ -517,6 +527,40 @@
     });
   }
 
+  // ===== Fecha mínima según tamaño =====
+// T12/T16 => 2 semanas; T20/T24 => 3 semanas; resto => 4 semanas
+function minDaysForSize(size){
+  if (size === 'T12' || size === 'T16') return 14;
+  if (size === 'T20' || size === 'T24') return 21;
+  return 28; // T30 y superiores
+}
+
+function toISODate(d){ return d.toISOString().slice(0,10); }
+
+function applyMinDate(){
+  // refrescamos s1 por si cambió
+  s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+  const days = minDaysForSize(s1.size || 'T30');
+  const base = new Date();
+  base.setHours(0,0,0,0);
+  const min = new Date(base.getTime() + days*24*60*60*1000);
+  const iso = toISODate(min);
+
+  // aplicar mínimo al input
+  if ($contactDate) {
+    $contactDate.min = iso;
+
+    // autocorregir si el usuario eligió antes del mínimo
+    if ($contactDate.value && $contactDate.value < iso){
+      $contactDate.value = iso;
+    }
+
+    // ayuda visual (opcional): muestra el mínimo en un data-attr
+    $contactDate.setAttribute('data-min-label', iso);
+  }
+}
+
+
   // ⬇⬇ NUEVO: mostrar precio en el HTML al lado de cada extra
   extrasEls.forEach(el => {
     const price = Number(el.dataset.price || 0);
@@ -536,51 +580,64 @@
   }
 
   function updateStep3(){
+  // refrescar estados
+    s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+    s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
+  
     const extras = getExtrasSelected();
     const extrasTotal = extras.reduce((acc,x)=>acc + x.price, 0);
-
     const baseTotal = Number(s2?.priceTotal || s1?.priceTotal || 0);
     const finalTotal = baseTotal + extrasTotal;
-
+  
     const lines = [];
-    lines.push(`Tamaño: ${s1.size || '—'}`);
-    lines.push(`Marco/base: ${s1.base || '—'}`);
-    lines.push(`Bizcocho: ${s1.flavor || '—'}`);
-    lines.push(`Relleno 1: ${s2.fill1 || '—'}`);
-    lines.push(`Relleno 2: ${s2.fill2 || '—'}`);
-    lines.push(`Cobertura: ${s2.cover || '—'}`);
-    if ($contactName.value.trim()) {
-      lines.push('Contacto: ' + $contactName.value.trim());
+  
+    // ===== Detalle paso 1 =====
+    lines.push(`Tamaño: ${s1.sizeLabel || s1.size || '—'}`);
+    if (s1.sizeMeta){
+      lines.push(`Porciones: ${s1.sizeMeta.porciones} · Diámetro: ${s1.sizeMeta.diametro} · Capas: ${s1.sizeMeta.capas}`);
     }
-    if ($contactWhats.value.trim()) {
-      lines.push('WhatsApp: ' + $contactWhats.value.trim());
-    }
-    if ($contactDate.value) {
-      lines.push('Fecha tentativa: ' + $contactDate.value);
-    }
-
+    lines.push(`Marco/base: ${s1.baseLabel || s1.base || '—'}`);
+    lines.push(`Bizcocho: ${s1.flavorLabel || s1.flavor || '—'}`);
+  
+    // ===== Detalle paso 2 =====
+    lines.push(`Relleno 1: ${s2.fill1Label || s2.fill1 || '—'}`);
+    lines.push(`Relleno 2: ${s2.fill2 ? (s2.fill2Label || s2.fill2) : '—'}`);
+    lines.push(`Cobertura: ${s2.coverLabel || s2.cover || '—'}`);
+  
+    // ===== Extras =====
     if (extras.length){
       lines.push('Extras: ' + extras.map(e => `${e.name} (+${money(e.price)})`).join(', '));
     }
+  
+    // ===== Contacto + Mensaje =====
     const notasTxt = $notas.value?.trim();
-    if (notasTxt) lines.push('Notas: ' + notasTxt);
-
+    if ($contactName.value.trim())  lines.push('Contacto: ' + $contactName.value.trim());
+    if ($contactWhats.value.trim()) lines.push('WhatsApp: ' + $contactWhats.value.trim());
+    if ($contactEmail.value.trim()) lines.push('Correo: ' + $contactEmail.value.trim());
+    if ($contactDate.value)         lines.push('Fecha tentativa: ' + $contactDate.value);
+    if (notasTxt)                   lines.push('Mensaje: ' + notasTxt);
+  
+    // pintar resumen
     $summary.innerHTML = lines.map(l => `<li>${l}</li>`).join('');
-
+  
+    // badges dietarios + extras
     const badges = [];
     if (s1.base === 'SAZ') badges.push('Sin azúcar');
-    if (s1.base === 'SGL' || s1.base === 'ISG' || s1.base === 'VGS') badges.push('Sin gluten');
-    if (s1.base === 'VEG' || s1.base === 'VGS') badges.push('Vegano');
+    if (['SGL','ISG','VGS'].includes(s1.base)) badges.push('Sin gluten');
+    if (['VEG','VGS'].includes(s1.base)) badges.push('Vegano');
     extras.forEach(e => badges.push(e.name));
     $badges.innerHTML = badges.map(b => `<span class="pill">${b}</span>`).join('');
-
+  
+    // total final
     $totalFinal.textContent = money(finalTotal);
-
+  
+    // SKU final
     const skuStep2 = (s1.size || 'T??') + '-' + (s1.base || '???') + '-' + (s1.flavor || '???')
                    + '-' + (s2.fill1 || 'NR') + (s2.fill2 || '') + '-' + (s2.cover || 'NC');
     const skuExtras = extras.length ? '-EX' + extras.length : '';
     $skuFinal.textContent = 'SKU: ' + skuStep2 + skuExtras;
-
+  
+    // guardar paso 3
     sessionStorage.setItem('ttm_step3', JSON.stringify({
       extras,
       notas: notasTxt,
@@ -593,8 +650,8 @@
       priceExtras: extrasTotal,
       priceTotal: finalTotal
     }));
-
   }
+
 
   window.addEventListener('ttm:s2-change', (ev) => {
     s2 = ev.detail || s2;
@@ -652,9 +709,15 @@
     alert('Pedido guardado (demo):\n' + JSON.stringify(order, null, 2));
   });
 }
-
-
-  updateStep3();
+    // cuando cambie tamaño/base/sabor en paso 1 → recalcular mínimo
+    window.addEventListener('ttm:s1-change', () => {
+      applyMinDate();
+      updateStep3();
+    });
+    
+    // init
+    applyMinDate();
+    updateStep3();
 })();
 </script>
 
@@ -664,6 +727,7 @@
   
 </body>
 </html>
+
 
 
 
