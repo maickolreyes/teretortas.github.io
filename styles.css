@@ -159,3 +159,12 @@ img.logo{
   object-fit: cover;
   display: block;
 }
+
+#contact_date[data-min-label]::after{
+  content: " Mínimo disponible: " attr(data-min-label);
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
