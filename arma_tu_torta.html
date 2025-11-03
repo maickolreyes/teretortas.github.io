@@ -537,28 +537,33 @@ function minDaysForSize(size){
 
 function toISODate(d){ return d.toISOString().slice(0,10); }
 
-function applyMinDate(){
-  // refrescamos s1 por si cambió
-  s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
-  const days = minDaysForSize(s1.size || 'T30');
-  const base = new Date();
-  base.setHours(0,0,0,0);
-  const min = new Date(base.getTime() + days*24*60*60*1000);
-  const iso = toISODate(min);
-
-  // aplicar mínimo al input
-  if ($contactDate) {
-    $contactDate.min = iso;
-
-    // autocorregir si el usuario eligió antes del mínimo
-    if ($contactDate.value && $contactDate.value < iso){
-      $contactDate.value = iso;
+    function applyMinDate(){
+      // refrescar paso 1 por si cambió el tamaño
+      s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+    
+      // regla: T12/T16 = 14 días; T20/T24 = 21; resto = 28
+      const days = (s1.size === 'T12' || s1.size === 'T16') ? 14
+                  : (s1.size === 'T20' || s1.size === 'T24') ? 21
+                  : 28;
+    
+      const base = new Date(); base.setHours(0,0,0,0);
+      const min  = new Date(base.getTime() + days*24*60*60*1000);
+      const iso  = min.toISOString().slice(0,10);
+    
+      if ($contactDate){
+        // 1) fijar mínimo en el input (el calendario ya deshabilita anteriores)
+        $contactDate.min = iso;
+    
+        // 2) AUTORRELLENAR: si está vacío o es menor, pone el mínimo
+        if (!$contactDate.value || $contactDate.value < iso){
+          $contactDate.value = iso;
+        }
+    
+        // (opcional) etiqueta visual
+        $contactDate.setAttribute('data-min-label', iso);
+      }
     }
 
-    // ayuda visual (opcional): muestra el mínimo en un data-attr
-    $contactDate.setAttribute('data-min-label', iso);
-  }
-}
 
 
   // ⬇⬇ NUEVO: mostrar precio en el HTML al lado de cada extra
@@ -709,6 +714,13 @@ function applyMinDate(){
     alert('Pedido guardado (demo):\n' + JSON.stringify(order, null, 2));
   });
 }
+  $contactDate.addEventListener('change', () => {
+  const min = $contactDate.min || '';
+  if ($contactDate.value && min && $contactDate.value < min){
+    $contactDate.value = min; // vuelve al mínimo
+  }
+});
+
     // cuando cambie tamaño/base/sabor en paso 1 → recalcular mínimo
     window.addEventListener('ttm:s1-change', () => {
       applyMinDate();
@@ -727,6 +739,7 @@ function applyMinDate(){
   
 </body>
 </html>
+
 
 
 
