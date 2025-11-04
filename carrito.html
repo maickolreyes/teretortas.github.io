@@ -144,6 +144,24 @@
   }
 
   function render(){
+
+    const btnPay = document.getElementById('btnPay');
+    
+    if (!cart.length){
+      document.getElementById('orderHeader').innerHTML = '<b>Carrito vacío</b>';
+      const lines = document.getElementById('lines');
+      lines.innerHTML = '<tr><td colspan="2" class="note">No hay productos en tu carrito.</td></tr>';
+      document.getElementById('subtotal').textContent = money(0);
+      document.getElementById('extras').textContent   = money(0);
+      document.getElementById('total').textContent    = money(0);
+      document.getElementById('dueDeposit').textContent = money(0);
+      document.getElementById('dueFull').textContent    = money(0);
+      document.getElementById('dueBalance').textContent = money(0);
+      if (btnPay) btnPay.disabled = true;
+      return;
+    }
+    if (btnPay) btnPay.disabled = false;
+
     order = getCurrentOrder();
     if (!order) return;
     // Header
@@ -164,9 +182,17 @@
     lines.innerHTML = '';
 
     const addLine = (name, amt)=> {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${name}</td><td class="right">${money(amt)}</td>`;
-      lines.appendChild(tr);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        #${idx+1} · ${s1.sizeLabel||s1.size||''} · ${s1.baseLabel||s1.base||''} · ${s1.flavorLabel||s1.flavor||''}
+        · R1:${s2.fill1||'—'} ${s2.fill2?('· R2:'+s2.fill2):''} · Cob:${s2.cover||'—'}
+        <div class="note mono">ID: ${o.id}</div>
+        <button class="btn secondary btn-del" data-id="${o.id}" style="margin-top:6px;padding:6px 10px">Eliminar</button>
+      </td>
+      <td class="right">${money((o.total||0))}</td>
+    `;
+    lines.appendChild(tr);
     };
 
     // Desglosar a partir de lo que guardamos
@@ -190,6 +216,33 @@
     const notesEl = document.getElementById('notes');
     notesEl.textContent = order.notes ? ('Notas: ' + order.notes) : '';
   }
+
+    function removeItem(id){
+    // 1) quitar del carrito
+    let cart = readList('ttm_cart').filter(o => o.id !== id);
+    writeList('ttm_cart', cart);
+  
+    // 2) si ya estaba agendado, quitar la cita asociada
+    const agenda = readList('ttm_agenda');
+    const ai = agenda.findIndex(a => a.id === id);
+    if (ai > -1){
+      agenda.splice(ai, 1);
+      writeList('ttm_agenda', agenda);
+    }
+  
+    // 3) refrescar vista
+    render();
+  }
+  
+  document.getElementById('lines').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.btn-del');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (confirm('¿Eliminar este ítem del carrito?')){
+      removeItem(id);
+    }
+  });
+
 
   // Confirmar pago (demo)
   function confirmPayment(){
