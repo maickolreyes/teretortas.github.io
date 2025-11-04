@@ -168,3 +168,21 @@ img.logo{
   margin-top: 4px;
 }
 
+/* ===== Agenda (admin) ===== */
+.wrap{ max-width:1100px; margin:0 auto; padding:16px; }
+.toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
+
+/* tablas ya existen; reforzamos por si esta página se abre sola */
+table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+th,td{ padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; font-size:14px; }
+th{ background:#f8fafc; font-weight:800; font-size:12px; letter-spacing:.04em; color:#374151; position:sticky; top:0; }
+tr:last-child td{ border-bottom:none; }
+
+/* pills de estado */
+.pill{ padding:2px 8px; border-radius:999px; font-size:12px; display:inline-block; }
+.pill.ok{ background:#dcfce7; color:#065f46; }
+.pill.warn{ background:#fef9c3; color:#854d0e; }
+.pill.info{ background:#e0f2fe; color:#075985; }
+
+
+
