@@ -670,50 +670,135 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   });
 
 
+  function readS(n){ return JSON.parse(sessionStorage.getItem(n) || '{}'); }
+  function readList(n){ return JSON.parse(sessionStorage.getItem(n) || '[]'); }
+  function writeList(n, arr){ sessionStorage.setItem(n, JSON.stringify(arr)); }
+
+  // Horarios disponibles por defecto
+  const DEFAULT_SLOTS = ['10:00','12:00','15:00','18:00'];
+
+  // Genera un ID simple para la orden/cita
+  function genId(){ return 'TT-' + Date.now().toString(36); }
+
+  // Asignar primer horario libre en la fecha dada
+  function assignSlot(dateStr){
+    const agenda = readList('ttm_agenda');
+    const taken = new Set(agenda.filter(x => x.date === dateStr).map(x => x.time));
+    for (const t of DEFAULT_SLOTS){
+      if (!taken.has(t)) return t;
+    }
+    // Si todo ocupado, deja 10:00 igualmente (o empuja a día siguiente si quieres)
+    return DEFAULT_SLOTS[0];
+  }
+
+  function buildOrder(){
+    const s1 = readS('ttm_step1');
+    const s2 = readS('ttm_step2');
+    const s3 = readS('ttm_step3');
+
+    // si no hay fecha en contacto, aseguramos mínimo
+    const dateStr = (s3?.contact?.date) || '';
+    const id = genId();
+    const total = s3.priceTotal || s2.priceTotal || s1.priceTotal || 0;
+
+    return {
+      id,
+      createdAt: new Date().toISOString(),
+      total,
+      step1: s1,
+      step2: s2,
+      step3: s3,
+      contact: s3.contact || {},
+      notes: s3.notas || ''
+    };
+  }
+
+  function saveOrder(order){
+    const list = readList('ttm_orders');
+    list.push(order);
+    writeList('ttm_orders', list);
+  }
+
+  function scheduleOrder(order){
+    // fecha tentativa obligatoria (ya se autocompleta al mínimo en tu paso 3)
+    const dateStr = order?.contact?.date;
+    const timeStr = assignSlot(dateStr);
+    const agenda = readList('ttm_agenda');
+
+    const entry = {
+      id: order.id,
+      date: dateStr,
+      time: timeStr,
+      status: 'Programada',
+      customer: order?.contact?.name || 'Sin nombre',
+      phone: order?.contact?.whatsapp || '',
+      sku:  (order.step1.size || 'T??') + '-' + (order.step1.base || '???') + '-' + (order.step1.flavor || '???')
+          + '-' + (order.step2.fill1 || 'NR') + (order.step2.fill2 || '') + '-' + (order.step2.cover || 'NC'),
+      total: order.total
+    };
+
+    agenda.push(entry);
+    writeList('ttm_agenda', agenda);
+    return entry;
+  }
+
   const btnAdd  = document.getElementById('btnAdd');
   const btnNext = document.getElementById('btnNext');
 
   if (btnAdd){
     btnAdd.addEventListener('click', () => {
-      const p3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
-      alert('Pedido añadido (demo):\n' + JSON.stringify(p3, null, 2));
+      const s1 = readS('ttm_step1');
+      const s2 = readS('ttm_step2');
+      const s3 = readS('ttm_step3');
+
+      const errs = [];
+      if (!s1.size)   errs.push('Falta seleccionar el tamaño.');
+      if (!s1.base)   errs.push('Falta seleccionar el marco/base.');
+      if (!s1.flavor) errs.push('Falta seleccionar el sabor.');
+      if (!s2.cover)  errs.push('Falta seleccionar la cobertura.');
+      if (!s3?.contact?.name)     errs.push('Falta el nombre de contacto.');
+      if (!s3?.contact?.whatsapp) errs.push('Falta el WhatsApp de contacto.');
+      if (!s3?.contact?.date)     errs.push('Falta la fecha tentativa (se autocompleta con el mínimo).');
+
+      if (errs.length){
+        alert('No se puede guardar el pedido:\n- ' + errs.join('\n- '));
+        return;
+      }
+
+      const order = buildOrder();
+      saveOrder(order);
+      alert('Pedido añadido (demo):\n' + JSON.stringify(order, null, 2));
     });
   }
-  if (btnAdd){
-  btnAdd.addEventListener('click', () => {
-    const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
-    const s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
-    const s3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
 
-    // validaciones simples
-    const errs = [];
-    if (!s1.size) errs.push('Falta seleccionar el tamaño.');
-    if (!s1.base) errs.push('Falta seleccionar el marco/base.');
-    if (!s1.flavor) errs.push('Falta seleccionar el sabor.');
-    if (!s2.cover) errs.push('Falta seleccionar la cobertura.');
+  if (btnNext){
+    btnNext.addEventListener('click', () => {
+      // Validamos/guardamos y además AGENDAMOS en el horario disponible
+      const s1 = readS('ttm_step1');
+      const s2 = readS('ttm_step2');
+      const s3 = readS('ttm_step3');
 
-    if (errs.length){
-      alert('No se puede guardar el pedido:\n- ' + errs.join('\n- '));
-      return;
-    }
+      const errs = [];
+      if (!s1.size)   errs.push('Falta seleccionar el tamaño.');
+      if (!s1.base)   errs.push('Falta seleccionar el marco/base.');
+      if (!s1.flavor) errs.push('Falta seleccionar el sabor.');
+      if (!s2.cover)  errs.push('Falta seleccionar la cobertura.');
+      if (!s3?.contact?.name)     errs.push('Falta el nombre de contacto.');
+      if (!s3?.contact?.whatsapp) errs.push('Falta el WhatsApp de contacto.');
+      if (!s3?.contact?.date)     errs.push('Falta la fecha tentativa (se autocompleta con el mínimo).');
 
-    const order = {
-      cliente: 'demo',          // esto lo vamos a llenar en agenda
-      paso1: s1,
-      paso2: s2,
-      paso3: s3,
-      total: s3.priceTotal || s2.priceTotal || s1.priceTotal || 0,
-      createdAt: new Date().toISOString()
-    };
+      if (errs.length){
+        alert('No se puede continuar:\n- ' + errs.join('\n- '));
+        return;
+      }
 
-    // guardar en una lista de pedidos locales (por si queremos leerla en la agenda)
-    const list = JSON.parse(sessionStorage.getItem('ttm_orders') || '[]');
-    list.push(order);
-    sessionStorage.setItem('ttm_orders', JSON.stringify(list));
-
-    alert('Pedido guardado (demo):\n' + JSON.stringify(order, null, 2));
-  });
-}
+      const order = buildOrder();
+      saveOrder(order);
+      const appt = scheduleOrder(order);  // ← aquí se agrega a la agenda (fecha + primer horario libre)
+      // Redirigir a agenda para visualizarlo
+      window.location.href = 'agenda.html';
+    });
+  }
   $contactDate.addEventListener('change', () => {
   const min = $contactDate.min || '';
   if ($contactDate.value && min && $contactDate.value < min){
@@ -739,6 +824,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
