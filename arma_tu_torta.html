@@ -677,18 +677,46 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   // Horarios disponibles por defecto
   const DEFAULT_SLOTS = ['10:00','12:00','15:00','18:00'];
 
+    // contar reservas por slot en una fecha
+  function slotCountsForDate(dateStr){
+    const agenda = readList('ttm_agenda');
+    const counts = Object.fromEntries(DEFAULT_SLOTS.map(t => [t, 0]));
+    agenda.filter(x => x.date === dateStr).forEach(x => {
+      if (counts[x.time] != null) counts[x.time]++;
+    });
+    return counts;
+  }
+  
+  // devuelve el primer slot con < 2 reservas; si ninguno, null
+  function firstAvailableSlot(dateStr){
+    const counts = slotCountsForDate(dateStr);
+    for (const t of DEFAULT_SLOTS){
+      if ((counts[t] || 0) < 2) return t;
+    }
+    return null;
+  }
+  
+  // avanzar a día siguiente (YYYY-MM-DD -> YYYY-MM-DD)
+  function nextDateStr(dateStr){
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 1);
+    const iso = d.toISOString().slice(0,10);
+    return iso;
+  }
+  
   // Genera un ID simple para la orden/cita
   function genId(){ return 'TT-' + Date.now().toString(36); }
 
-  // Asignar primer horario libre en la fecha dada
-  function assignSlot(dateStr){
-    const agenda = readList('ttm_agenda');
-    const taken = new Set(agenda.filter(x => x.date === dateStr).map(x => x.time));
-    for (const t of DEFAULT_SLOTS){
-      if (!taken.has(t)) return t;
+ // Asignar slot con tope de 2 por horario; si día lleno, busca día siguiente
+  function assignSlotOrNext(dateStr, maxLookaheadDays = 30){
+    let date = dateStr;
+    for (let i = 0; i <= maxLookaheadDays; i++){
+      const slot = firstAvailableSlot(date);
+      if (slot) return { date, time: slot, bumped: (i > 0) };
+      date = nextDateStr(date);
     }
-    // Si todo ocupado, deja 10:00 igualmente (o empuja a día siguiente si quieres)
-    return DEFAULT_SLOTS[0];
+    // fallback extremo: si no encontró en 30 días, vuelve a la fecha original primer slot
+    return { date: dateStr, time: DEFAULT_SLOTS[0], bumped: true };
   }
 
   function buildOrder(){
@@ -720,25 +748,29 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   }
 
   function scheduleOrder(order){
-    // fecha tentativa obligatoria (ya se autocompleta al mínimo en tu paso 3)
-    const dateStr = order?.contact?.date;
-    const timeStr = assignSlot(dateStr);
+    const wantedDate = order?.contact?.date;
+    const pick = assignSlotOrNext(wantedDate);
+  
     const agenda = readList('ttm_agenda');
-
     const entry = {
       id: order.id,
-      date: dateStr,
-      time: timeStr,
-      status: 'Programada',
+      date: pick.date,
+      time: pick.time,
+      status: pick.bumped ? 'Programada (reubicada)' : 'Programada',
       customer: order?.contact?.name || 'Sin nombre',
       phone: order?.contact?.whatsapp || '',
       sku:  (order.step1.size || 'T??') + '-' + (order.step1.base || '???') + '-' + (order.step1.flavor || '???')
           + '-' + (order.step2.fill1 || 'NR') + (order.step2.fill2 || '') + '-' + (order.step2.cover || 'NC'),
       total: order.total
     };
-
+  
     agenda.push(entry);
     writeList('ttm_agenda', agenda);
+  
+    // Aviso gentil si se reubicó al día siguiente
+    if (pick.bumped) {
+      alert(`El día ${wantedDate} no tenía cupos disponibles.\nSe agendó automáticamente el ${pick.date} a las ${pick.time}.`);
+    }
     return entry;
   }
 
@@ -824,6 +856,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
