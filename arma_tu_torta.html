@@ -670,9 +670,12 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   });
 
 
+  // Helpers
   function readS(n){ return JSON.parse(sessionStorage.getItem(n) || '{}'); }
   function readList(n){ return JSON.parse(sessionStorage.getItem(n) || '[]'); }
   function writeList(n, arr){ sessionStorage.setItem(n, JSON.stringify(arr)); }
+  function genId(){ return 'TT-' + Date.now().toString(36) + '-' + Math.floor(Math.random()*1e4).toString(36); }
+
 
   // Horarios disponibles por defecto
   const DEFAULT_SLOTS = ['10:00','12:00','15:00','18:00'];
@@ -703,9 +706,6 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
     const iso = d.toISOString().slice(0,10);
     return iso;
   }
-  
-  // Genera un ID simple para la orden/cita
-  function genId(){ return 'TT-' + Date.now().toString(36); }
 
  // Asignar slot con tope de 2 por horario; si día lleno, busca día siguiente
   function assignSlotOrNext(dateStr, maxLookaheadDays = 30){
@@ -720,26 +720,21 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   }
 
   function buildOrder(){
-    const s1 = readS('ttm_step1');
-    const s2 = readS('ttm_step2');
-    const s3 = readS('ttm_step3');
-
-    // si no hay fecha en contacto, aseguramos mínimo
-    const dateStr = (s3?.contact?.date) || '';
-    const id = genId();
+    const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+    const s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
+    const s3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
     const total = s3.priceTotal || s2.priceTotal || s1.priceTotal || 0;
-
+  
     return {
-      id,
+      id: genId(),
       createdAt: new Date().toISOString(),
       total,
-      step1: s1,
-      step2: s2,
-      step3: s3,
+      step1: s1, step2: s2, step3: s3,
       contact: s3.contact || {},
       notes: s3.notas || ''
     };
   }
+
 
   function saveOrder(order){
     const list = readList('ttm_orders');
@@ -779,10 +774,10 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
 
   if (btnAdd){
     btnAdd.addEventListener('click', () => {
-      const s1 = readS('ttm_step1');
-      const s2 = readS('ttm_step2');
-      const s3 = readS('ttm_step3');
-
+      const s1 = JSON.parse(sessionStorage.getItem('ttm_step1') || '{}');
+      const s2 = JSON.parse(sessionStorage.getItem('ttm_step2') || '{}');
+      const s3 = JSON.parse(sessionStorage.getItem('ttm_step3') || '{}');
+  
       const errs = [];
       if (!s1.size)   errs.push('Falta seleccionar el tamaño.');
       if (!s1.base)   errs.push('Falta seleccionar el marco/base.');
@@ -790,18 +785,29 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
       if (!s2.cover)  errs.push('Falta seleccionar la cobertura.');
       if (!s3?.contact?.name)     errs.push('Falta el nombre de contacto.');
       if (!s3?.contact?.whatsapp) errs.push('Falta el WhatsApp de contacto.');
-      if (!s3?.contact?.date)     errs.push('Falta la fecha tentativa (se autocompleta con el mínimo).');
-
+      if (!s3?.contact?.date)     errs.push('Falta la fecha tentativa.');
+  
       if (errs.length){
         alert('No se puede guardar el pedido:\n- ' + errs.join('\n- '));
         return;
       }
-
+  
       const order = buildOrder();
-      saveOrder(order);
-      alert('Pedido añadido (demo):\n' + JSON.stringify(order, null, 2));
+  
+      // Agregar al carrito acumulativo
+      const cart = readList('ttm_cart');
+      cart.push(order);
+      writeList('ttm_cart', cart);
+  
+      // (Opcional) historial de órdenes también
+      const orders = readList('ttm_orders');
+      orders.push(order);
+      writeList('ttm_orders', orders);
+  
+      alert(`Añadido al carrito (items: ${cart.length}).`);
     });
   }
+
 
   if (btnNext){
     btnNext.addEventListener('click', () => {
@@ -856,6 +862,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
