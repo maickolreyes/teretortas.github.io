@@ -67,6 +67,31 @@
   function readSessionList(k){ try{ return JSON.parse(sessionStorage.getItem(k) || '[]'); }catch{ return []; } }
   function readLocalList(k){ try{ return JSON.parse(localStorage.getItem(k) || '[]'); }catch{ return []; } }
   function money(n){ return (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
+  const SLOTS = ['10:00','12:00','15:00','17:00','19:00'];
+
+  function minDaysForSize(size){
+    if (size==='T12' || size==='T16') return 14;
+    if (size==='T20' || size==='T24') return 21;
+    return 28; // T30 u otras
+  }
+  
+  function toISO(d){ return d.toISOString().slice(0,10); }
+  
+  function slotCountsForDate(arr, dateStr){
+    const counts = Object.fromEntries(SLOTS.map(t => [t,0]));
+    arr.filter(x => x.fecha===dateStr).forEach(x => { if (counts[x.hora]!=null) counts[x.hora]++; });
+    return counts;
+  }
+  
+  function firstSlotWithCapacity(counts, cap=2){
+    return SLOTS.find(t => (counts[t]||0) < cap) || null;
+  }
+  
+  function nextDateStr(dateStr){
+    const d = new Date(dateStr); d.setDate(d.getDate()+1);
+    return toISO(d);
+  }
+
 
   // Cargar agenda desde SStorage (nuevo) o fallback a LStorage (viejo)
   function loadAgendaRaw(){
@@ -116,27 +141,59 @@
       `).join('');
   }
 
-  // Botón "Agregar orden demo" (lo dejamos funcionando con tu LS viejo por si lo usas)
-  const btnAdd = document.getElementById('add');
-  if (btnAdd){
-    btnAdd.onclick = ()=>{
-      const all = readLocalList(KEY_L);
-      const n = all.length + 1;
-      const horas = ['10:00','12:00','15:00','17:00','19:00'];
-      const h = horas[Math.floor(Math.random()*horas.length)];
-      all.push({
-        orden:`TT-${String(n).padStart(4,'0')}`,
-        cliente:'Cliente Demo',
-        fecha:f.value,
-        hora:h,
-        producto:'Torta personalizada 16p',
-        estado:['Programada','Confirmada','En producción','Lista','Entregada','Cancelada'][Math.floor(Math.random()*6)],
-        notas:'Sin gluten, mensaje “Feliz día”'
-      });
-      localStorage.setItem(KEY_L, JSON.stringify(all));
-      render();
-    };
+ document.getElementById('add').onclick = ()=>{
+  const KEY_L = 'tt_agenda_v1';
+  const all = JSON.parse(localStorage.getItem(KEY_L) || '[]');
+
+  // 1) tamaño aleatorio y fecha mínima por tamaño
+  const sizes = ['T12','T16','T20','T24','T30'];
+  const size  = sizes[Math.floor(Math.random()*sizes.length)];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const min = new Date(today.getTime() + minDaysForSize(size)*24*60*60*1000);
+  let fechaMin = toISO(min);
+
+  // 2) si el input tiene una fecha anterior a la mínima, corrígela al mínimo
+  //    (y úsala como fecha deseada)
+  if (!f.value || f.value < fechaMin) f.value = fechaMin;
+  let fechaDeseada = f.value;
+
+  // 3) asignar primer slot con capacidad (<2). Si el día está lleno, avanza de día
+  let fecha = fechaDeseada;
+  let counts = slotCountsForDate(all, fecha);
+  let slot = firstSlotWithCapacity(counts, 2);
+  let bumped = false;
+  for (let i=0; i<31 && !slot; i++){
+    fecha = nextDateStr(fecha);
+    counts = slotCountsForDate(all, fecha);
+    slot = firstSlotWithCapacity(counts, 2);
+    bumped = true;
   }
+  if (!slot){ // último recurso
+    fecha = fechaDeseada;
+    slot = SLOTS[0];
+    bumped = true;
+  }
+
+  // 4) crear y guardar la orden demo en proceso
+  const n = all.length + 1;
+  all.push({
+    orden: `TT-${String(n).padStart(4,'0')}`,
+    cliente: 'Cliente Demo',
+    fecha,                 // fecha final asignada (>= mínima por tamaño)
+    hora: slot,            // con tope 2 por horario
+    producto: `Torta personalizada ${size.replace('T','')}p`,
+    estado: bumped ? 'En producción' : 'En producción', // puedes marcar 'Programada' si prefieres
+    notas: `Auto (min por tamaño ${size}). ${bumped ? 'Reubicada por cupos.' : ''}`
+  });
+  localStorage.setItem(KEY_L, JSON.stringify(all));
+  render();
+
+  if (bumped){
+    alert(`El día seleccionado estaba lleno. Se agendó automáticamente el ${fecha} a las ${slot}.`);
+  }
+};
+
+
 
   f.addEventListener('change', render);
   render();
@@ -151,4 +208,5 @@
 
 </body>
 </html>
+
 
