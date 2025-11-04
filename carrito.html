@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teretortas y Más · Carrito</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    section.card{background:#fff;border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:16px;margin:12px 0}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    .note{color:#6b7280;font-size:12px}
+    .totals{border-top:1px dashed #e5e7eb;margin-top:10px;padding-top:10px}
+    .money{font-weight:800}
+    .due{font-size:22px;font-weight:900}
+    .methods{display:flex;gap:12px;flex-wrap:wrap}
+    .paycard{border:1px solid #e5e7eb;border-radius:12px;padding:12px;flex:1;min-width:260px}
+    .btn{background:#111827;color:#fff;border:none;padding:12px 16px;border-radius:10px;cursor:pointer}
+    .btn.secondary{background:#f3f4f6;color:#111827}
+    .right{text-align:right}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 6px;border-bottom:1px solid #f1f5f9;font-size:14px}
+    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#64748b}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container brand">
+      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+      <div>
+        <h1>Carrito</h1>
+        <nav class="note">
+          <a href="index.html">Inicio</a>
+          <a href="arma_tu_torta.html">Arma tu torta</a>
+          <a href="agenda.html">Agenda</a>
+          <a href="inventario.html">Inventario</a>
+        </nav>
+        <div class="note">Para confirmar tu pedido debes <b>abonar el 50%</b> o pagar el total.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="grid">
+        <!-- Detalle del pedido -->
+        <div>
+          <h2>Resumen del pedido</h2>
+          <div id="orderHeader" class="note"></div>
+
+          <table style="margin-top:10px">
+            <thead>
+              <tr><th>Concepto</th><th class="right">Monto</th></tr>
+            </thead>
+            <tbody id="lines"><!-- items --></tbody>
+            <tfoot>
+              <tr><td class="right"><b>Subtotal</b></td><td class="right money" id="subtotal">$0</td></tr>
+              <tr><td class="right">Extras</td><td class="right money" id="extras">$0</td></tr>
+              <tr><td class="right">Total</td><td class="right money" id="total">$0</td></tr>
+            </tfoot>
+          </table>
+
+          <div class="note" id="notes" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Pago -->
+        <div>
+          <h2>Selecciona cómo pagar</h2>
+          <div class="methods">
+            <label class="paycard">
+              <input type="radio" name="pay" value="deposit" checked>
+              <b>Abonar 50%</b>
+              <div class="note">Abonas ahora y pagas el resto al retirar/entregar.</div>
+              <div class="totals">
+                <div>Monto a abonar ahora</div>
+                <div class="due" id="dueDeposit">$0</div>
+                <div class="note">Saldo pendiente: <span id="dueBalance">$0</span></div>
+              </div>
+            </label>
+
+            <label class="paycard">
+              <input type="radio" name="pay" value="full">
+              <b>Pagar total</b>
+              <div class="note">Pagas el total y listo.</div>
+              <div class="totals">
+                <div>Total a pagar</div>
+                <div class="due" id="dueFull">$0</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="note" style="margin-top:8px">
+            Luego de pagar, tu pedido pasa a <b>Confirmada</b> en la Agenda.
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+            <button id="btnPay" class="btn">Confirmar pago (demo)</button>
+            <button id="btnBack" class="btn secondary">Volver a configurar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>© Teretortas y Más · Demo</span>
+      <span class="links">
+        <a href="https://wa.me/56911111111" target="_blank" rel="noopener">WhatsApp +56 9 1111 1111</a>
+        <a href="https://instagram.com/teretortasymas" target="_blank" rel="noopener">Instagram Teretortas y Más</a>
+        <a href="https://facebook.com/teretortasymas" target="_blank" rel="noopener">Facebook Teretortas y Más</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+(function(){
+  // Helpers almacenamiento
+  const read = (k, def) => { try{ return JSON.parse(sessionStorage.getItem(k) || def); }catch{ return JSON.parse(def); } };
+  const readList = (k) => read(k, '[]');
+  const writeList = (k, val) => sessionStorage.setItem(k, JSON.stringify(val));
+  const money = (n)=> (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+
+  // Cargar último pedido (de ttm_orders) o reconstruir desde step1..3
+  function getCurrentOrder(){
+    const orders = readList('ttm_orders');
+    if (orders.length) return orders[orders.length-1];
+
+    // reconstrucción mínima si se llega directo
+    const s1 = read('ttm_step1','{}');
+    const s2 = read('ttm_step2','{}');
+    const s3 = read('ttm_step3','{}');
+    const total = s3.priceTotal || s2.priceTotal || s1.priceTotal || 0;
+    return {
+      id: 'TT-' + Date.now().toString(36),
+      createdAt: new Date().toISOString(),
+      total,
+      step1: s1, step2: s2, step3: s3,
+      contact: s3.contact || {},
+      notes: s3.notas || ''
+    };
+  }
+
+  function render(){
+    order = getCurrentOrder();
+    if (!order) return;
+    // Header
+    const oh = document.getElementById('orderHeader');
+    const c = order.contact || {};
+    const s1 = order.step1 || {};
+    const s2 = order.step2 || {};
+    const s3 = order.step3 || {};
+    oh.innerHTML = `
+      <div><b>Orden:</b> <span class="mono">${order.id}</span></div>
+      <div><b>Cliente:</b> ${c.name || '—'} · <b>WhatsApp:</b> ${c.whatsapp || '—'}</div>
+      <div><b>Fecha tentativa:</b> ${c.date || '—'}</div>
+      <div class="note">Config: ${s1.sizeLabel || s1.size || ''} · ${s1.baseLabel || s1.base || ''} · ${s1.flavorLabel || s1.flavor || ''} | R1: ${s2.fill1Label || s2.fill1 || '—'} · R2: ${s2.fill2Label || s2.fill2 || '—'} · Cob: ${s2.coverLabel || s2.cover || '—'}</div>
+    `;
+
+    // Lines
+    const lines = document.getElementById('lines');
+    lines.innerHTML = '';
+
+    const addLine = (name, amt)=> {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${name}</td><td class="right">${money(amt)}</td>`;
+      lines.appendChild(tr);
+    };
+
+    // Desglosar a partir de lo que guardamos
+    addLine(`Tamaño / Bizcocho`, (order.step1?.priceSize || 0) + (order.step1?.deltaFlavor || 0));
+    addLine(`Marco / Base`, (order.step1?.deltaBase || 0));
+    addLine(`Relleno 1`, (order.step2?.priceFill1 || 0));
+    if (order.step2?.priceFill2) addLine(`Relleno 2`, order.step2.priceFill2);
+    addLine(`Cobertura`, (order.step2?.priceCover || 0));
+
+    // Totales
+    document.getElementById('subtotal').textContent = money((order.step1?.priceTotal || 0));
+    const extras = (order.step3?.priceExtras || 0);
+    document.getElementById('extras').textContent = money(extras);
+    document.getElementById('total').textContent = money(order.total);
+
+    document.getElementById('dueDeposit').textContent = money(Math.round(order.total*0.5));
+    document.getElementById('dueFull').textContent    = money(order.total);
+    document.getElementById('dueBalance').textContent = money(order.total - Math.round(order.total*0.5));
+
+    // notas
+    const notesEl = document.getElementById('notes');
+    notesEl.textContent = order.notes ? ('Notas: ' + order.notes) : '';
+  }
+
+  // Confirmar pago (demo)
+  function confirmPayment(){
+    const method = document.querySelector('input[name="pay"]:checked')?.value || 'deposit';
+    const orders = readList('ttm_orders');
+    const idx = orders.findIndex(o => o.id === order.id);
+    const payNow = method === 'deposit' ? Math.round(order.total*0.5) : order.total;
+
+    // Registro de pagos (demo)
+    const payments = readList('ttm_payments');
+    payments.push({
+      orderId: order.id,
+      date: new Date().toISOString(),
+      method: method === 'deposit' ? 'Abono 50%' : 'Pago total',
+      amount: payNow
+    });
+    writeList('ttm_payments', payments);
+
+    // Actualizar agenda: poner estado Confirmada si existe la cita de esta orden
+    const agenda = readList('ttm_agenda');
+    const ai = agenda.findIndex(a => a.id === order.id);
+    if (ai > -1){
+      agenda[ai].status = 'Confirmada';
+      sessionStorage.setItem('ttm_agenda', JSON.stringify(agenda));
+    }
+
+    // Guardar por si no estaba en la lista (venir directo)
+    if (idx === -1){
+      orders.push(order);
+    }
+    sessionStorage.setItem('ttm_orders', JSON.stringify(orders));
+
+    alert(`Pago registrado (demo): ${method==='deposit'?'Abono 50%':'Total'} por ${money(payNow)}.\nTu orden ha sido Confirmada en la Agenda.`);
+    location.href = 'agenda.html';
+  }
+
+  // Volver a configurar
+  function back(){ history.back(); }
+
+  let order = null;
+  render();
+  document.getElementById('btnPay').addEventListener('click', confirmPayment);
+  document.getElementById('btnBack').addEventListener('click', back);
+})();
+  </script>
+</body>
+</html>
