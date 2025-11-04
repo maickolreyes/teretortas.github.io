@@ -828,7 +828,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
       saveOrder(order);
       const appt = scheduleOrder(order);  // ← aquí se agrega a la agenda (fecha + primer horario libre)
       // Redirigir a agenda para visualizarlo
-      window.location.href = 'agenda.html';
+      window.location.href = 'carrito.html';
     });
   }
   $contactDate.addEventListener('change', () => {
@@ -856,6 +856,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
