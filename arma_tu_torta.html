@@ -55,11 +55,11 @@
     <div>
       <label for="size">Tamaño</label>
       <select id="size" name="size">
-        <option value="T12" data-porciones="12" data-diametro="18 cm" data-capas="2">12 porciones · Ø18 cm · 2 capas</option>
-        <option value="T16" data-porciones="16" data-diametro="22 cm" data-capas="2">16 porciones · Ø22 cm · 2 capas</option>
-        <option value="T20" data-porciones="20" data-diametro="24 cm" data-capas="3">20 porciones · Ø24 cm · 3 capas</option>
-        <option value="T24" data-porciones="24" data-diametro="26 cm" data-capas="3">24 porciones · Ø26 cm · 3 capas</option>
-        <option value="T30" data-porciones="30" data-diametro="30 cm" data-capas="3">30 porciones · Ø30 cm · 3 capas</option>
+        <option value="T12" data-porciones="12" data-diametro="18 cm" data-capas="2">12 porciones · Ø18 cm · 3 capas</option>
+        <option value="T16" data-porciones="16" data-diametro="22 cm" data-capas="2">16 porciones · Ø22 cm · 3 capas</option>
+        <option value="T20" data-porciones="20" data-diametro="24 cm" data-capas="3">20 porciones · Ø24 cm · 4 capas</option>
+        <option value="T24" data-porciones="24" data-diametro="26 cm" data-capas="3">24 porciones · Ø26 cm · 4 capas</option>
+        <option value="T30" data-porciones="30" data-diametro="30 cm" data-capas="3">30 porciones · Ø30 cm · 4 capas</option>
       </select>
       <p class="note" id="sizeMeta" style="margin:.35rem 0 0"></p>
     </div>
@@ -235,8 +235,8 @@
         <div class="tot" id="total">$0</div>
       </div>
       <div class="row" style="margin-top:12px">
-        <button class="btn" id="btnAdd">Añadir al carrito (demo)</button>
-        <button class="btn secondary" id="btnNext">Continuar</button>
+        <button class="btn" id="btnAdd">Añadir al carrito</button>
+        <button class="btn secondary" id="btnNext">Ir a pagar</button>
       </div>
     </section>
   </main>
@@ -862,6 +862,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
