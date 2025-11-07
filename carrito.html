@@ -115,38 +115,40 @@
     </div>
   </footer>
 
-  <script>
+<script>
 (function(){
-  // Helpers almacenamiento
+  // ===== Helpers de almacenamiento y formato =====
   const read = (k, def) => { try{ return JSON.parse(sessionStorage.getItem(k) || def); }catch{ return JSON.parse(def); } };
   const readList = (k) => read(k, '[]');
   const writeList = (k, val) => sessionStorage.setItem(k, JSON.stringify(val));
   const money = (n)=> (n||0).toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
 
-  // Cargar último pedido (de ttm_orders) o reconstruir desde step1..3
-  function getCurrentOrder(){
-    const orders = readList('ttm_orders');
-    if (orders.length) return orders[orders.length-1];
+  // ===== Fuente de verdad: carrito =====
+  function getCart(){
+    const cart = readList('ttm_cart');
+    if (cart.length) return cart;
 
-    // reconstrucción mínima si se llega directo
+    // Fallback si llegaron directo sin carrito (construye 1 ítem desde step1..3)
     const s1 = read('ttm_step1','{}');
     const s2 = read('ttm_step2','{}');
     const s3 = read('ttm_step3','{}');
     const total = s3.priceTotal || s2.priceTotal || s1.priceTotal || 0;
-    return {
+    if (!total) return [];
+    return [{
       id: 'TT-' + Date.now().toString(36),
       createdAt: new Date().toISOString(),
       total,
       step1: s1, step2: s2, step3: s3,
       contact: s3.contact || {},
       notes: s3.notas || ''
-    };
+    }];
   }
 
+  // ===== Render principal =====
   function render(){
-
+    const cart = getCart();
     const btnPay = document.getElementById('btnPay');
-    
+
     if (!cart.length){
       document.getElementById('orderHeader').innerHTML = '<b>Carrito vacío</b>';
       const lines = document.getElementById('lines');
@@ -162,66 +164,59 @@
     }
     if (btnPay) btnPay.disabled = false;
 
-    order = getCurrentOrder();
-    if (!order) return;
-    // Header
-    const oh = document.getElementById('orderHeader');
-    const c = order.contact || {};
-    const s1 = order.step1 || {};
-    const s2 = order.step2 || {};
-    const s3 = order.step3 || {};
-    oh.innerHTML = `
-      <div><b>Orden:</b> <span class="mono">${order.id}</span></div>
-      <div><b>Cliente:</b> ${c.name || '—'} · <b>WhatsApp:</b> ${c.whatsapp || '—'}</div>
-      <div><b>Fecha tentativa:</b> ${c.date || '—'}</div>
-      <div class="note">Config: ${s1.sizeLabel || s1.size || ''} · ${s1.baseLabel || s1.base || ''} · ${s1.flavorLabel || s1.flavor || ''} | R1: ${s2.fill1Label || s2.fill1 || '—'} · R2: ${s2.fill2Label || s2.fill2 || '—'} · Cob: ${s2.coverLabel || s2.cover || '—'}</div>
+    // Encabezado resumido (cliente/fecha del 1º y listado de fechas)
+    const c0 = cart[0].contact || {};
+    document.getElementById('orderHeader').innerHTML = `
+      <div><b>Items:</b> ${cart.length}</div>
+      <div><b>Cliente:</b> ${c0.name || '—'} · <b>WhatsApp:</b> ${c0.whatsapp || '—'}</div>
+      <div><b>Fecha(s) tentativa(s):</b> ${[...new Set(cart.map(o=>o.contact?.date||'—'))].join(', ')}</div>
     `;
 
-    // Lines
+    // Filas (una por item del carrito, con botón Eliminar)
     const lines = document.getElementById('lines');
     lines.innerHTML = '';
 
-    const addLine = (name, amt)=> {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>
-        #${idx+1} · ${s1.sizeLabel||s1.size||''} · ${s1.baseLabel||s1.base||''} · ${s1.flavorLabel||s1.flavor||''}
-        · R1:${s2.fill1||'—'} ${s2.fill2?('· R2:'+s2.fill2):''} · Cob:${s2.cover||'—'}
-        <div class="note mono">ID: ${o.id}</div>
-        <button class="btn secondary btn-del" data-id="${o.id}" style="margin-top:6px;padding:6px 10px">Eliminar</button>
-      </td>
-      <td class="right">${money((o.total||0))}</td>
-    `;
-    lines.appendChild(tr);
-    };
+    let subtotal = 0, extras = 0, grand = 0;
 
-    // Desglosar a partir de lo que guardamos
-    addLine(`Tamaño / Bizcocho`, (order.step1?.priceSize || 0) + (order.step1?.deltaFlavor || 0));
-    addLine(`Marco / Base`, (order.step1?.deltaBase || 0));
-    addLine(`Relleno 1`, (order.step2?.priceFill1 || 0));
-    if (order.step2?.priceFill2) addLine(`Relleno 2`, order.step2.priceFill2);
-    addLine(`Cobertura`, (order.step2?.priceCover || 0));
+    cart.forEach((o, idx) => {
+      const s1 = o.step1||{}, s2 = o.step2||{}, s3 = o.step3||{};
+      subtotal += (s1.priceTotal || 0);
+      extras   += (s3.priceExtras || 0);
+      grand    += (o.total || 0);
 
-    // Totales
-    document.getElementById('subtotal').textContent = money((order.step1?.priceTotal || 0));
-    const extras = (order.step3?.priceExtras || 0);
-    document.getElementById('extras').textContent = money(extras);
-    document.getElementById('total').textContent = money(order.total);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          #${idx+1} · ${s1.sizeLabel||s1.size||''} · ${s1.baseLabel||s1.base||''} · ${s1.flavorLabel||s1.flavor||''}
+          · R1:${s2.fill1||'—'} ${s2.fill2?('· R2:'+s2.fill2):''} · Cob:${s2.cover||'—'}
+          <div class="note mono">ID: ${o.id} · Fecha: ${o.contact?.date || '—'}</div>
+          <button class="btn secondary btn-del" data-id="${o.id}" style="margin-top:6px;padding:6px 10px">Eliminar</button>
+        </td>
+        <td class="right">${money(o.total || 0)}</td>
+      `;
+      lines.appendChild(tr);
+    });
 
-    document.getElementById('dueDeposit').textContent = money(Math.round(order.total*0.5));
-    document.getElementById('dueFull').textContent    = money(order.total);
-    document.getElementById('dueBalance').textContent = money(order.total - Math.round(order.total*0.5));
+    document.getElementById('subtotal').textContent = money(subtotal);
+    document.getElementById('extras').textContent   = money(extras);
+    document.getElementById('total').textContent    = money(grand);
 
-    // notas
-    const notesEl = document.getElementById('notes');
-    notesEl.textContent = order.notes ? ('Notas: ' + order.notes) : '';
+    const due50 = Math.round(grand*0.5);
+    document.getElementById('dueDeposit').textContent = money(due50);
+    document.getElementById('dueFull').textContent    = money(grand);
+    document.getElementById('dueBalance').textContent = money(grand - due50);
+
+    // Notas combinadas
+    const allNotes = cart.map(o=>o.notes).filter(Boolean);
+    document.getElementById('notes').textContent = allNotes.length ? ('Notas: ' + allNotes.join(' | ')) : '';
   }
 
-    function removeItem(id){
+  // ===== Eliminar item del carrito + liberar cita en agenda =====
+  function removeItem(id){
     // 1) quitar del carrito
     let cart = readList('ttm_cart').filter(o => o.id !== id);
     writeList('ttm_cart', cart);
-  
+
     // 2) si ya estaba agendado, quitar la cita asociada
     const agenda = readList('ttm_agenda');
     const ai = agenda.findIndex(a => a.id === id);
@@ -229,64 +224,68 @@
       agenda.splice(ai, 1);
       writeList('ttm_agenda', agenda);
     }
-  
+
     // 3) refrescar vista
     render();
   }
-  
+
+  // Delegación para clicks en "Eliminar"
   document.getElementById('lines').addEventListener('click', (e)=>{
     const btn = e.target.closest('.btn-del');
     if (!btn) return;
     const id = btn.dataset.id;
-    if (confirm('¿Eliminar este ítem del carrito?')){
-      removeItem(id);
-    }
+    if (confirm('¿Eliminar este ítem del carrito?')) removeItem(id);
   });
 
-
-  // Confirmar pago (demo)
+  // ===== Confirmar pago (carrito completo) =====
   function confirmPayment(){
     const method = document.querySelector('input[name="pay"]:checked')?.value || 'deposit';
-    const orders = readList('ttm_orders');
-    const idx = orders.findIndex(o => o.id === order.id);
-    const payNow = method === 'deposit' ? Math.round(order.total*0.5) : order.total;
+    const cart = getCart();
+    if (!cart.length){ alert('Carrito vacío.'); return; }
 
-    // Registro de pagos (demo)
+    const grand = cart.reduce((a,o)=>a+(o.total||0),0);
+    const payNow = method === 'deposit' ? Math.round(grand*0.5) : grand;
+
+    // Registrar pago (nivel carrito)
     const payments = readList('ttm_payments');
     payments.push({
-      orderId: order.id,
+      cartId: 'C-' + Date.now().toString(36),
       date: new Date().toISOString(),
       method: method === 'deposit' ? 'Abono 50%' : 'Pago total',
-      amount: payNow
+      amount: payNow,
+      orderIds: cart.map(o=>o.id)
     });
     writeList('ttm_payments', payments);
 
-    // Actualizar agenda: poner estado Confirmada si existe la cita de esta orden
+    // Confirmar todas las citas de estos items (si existen)
     const agenda = readList('ttm_agenda');
-    const ai = agenda.findIndex(a => a.id === order.id);
-    if (ai > -1){
-      agenda[ai].status = 'Confirmada';
-      sessionStorage.setItem('ttm_agenda', JSON.stringify(agenda));
-    }
+    let touched = 0;
+    cart.forEach(o=>{
+      const idx = agenda.findIndex(a => a.id === o.id);
+      if (idx > -1){ agenda[idx].status = 'Confirmada'; touched++; }
+    });
+    sessionStorage.setItem('ttm_agenda', JSON.stringify(agenda));
 
-    // Guardar por si no estaba en la lista (venir directo)
-    if (idx === -1){
-      orders.push(order);
-    }
-    sessionStorage.setItem('ttm_orders', JSON.stringify(orders));
+    // Guardar también en historial de órdenes
+    const orders = readList('ttm_orders');
+    cart.forEach(o=>{ if (!orders.find(x=>x.id===o.id)) orders.push(o); });
+    writeList('ttm_orders', orders);
 
-    alert(`Pago registrado (demo): ${method==='deposit'?'Abono 50%':'Total'} por ${money(payNow)}.\nTu orden ha sido Confirmada en la Agenda.`);
+    alert(`Pago registrado (demo): ${method==='deposit'?'Abono 50%':'Total'} por ${money(payNow)}.\nÓrdenes confirmadas: ${touched}.`);
+    // Vaciar carrito tras pagar
+    sessionStorage.removeItem('ttm_cart');
     location.href = 'agenda.html';
   }
 
-  // Volver a configurar
+  // ===== Volver =====
   function back(){ history.back(); }
 
-  let order = null;
+  // Init
   render();
   document.getElementById('btnPay').addEventListener('click', confirmPayment);
   document.getElementById('btnBack').addEventListener('click', back);
 })();
-  </script>
+</script>
+
 </body>
 </html>
