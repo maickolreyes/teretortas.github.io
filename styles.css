@@ -184,5 +184,20 @@ tr:last-child td{ border-bottom:none; }
 .pill.warn{ background:#fef9c3; color:#854d0e; }
 .pill.info{ background:#e0f2fe; color:#075985; }
 
+/* --- auth / admin visibility --- */
+.admin-only{ display:none; }
+.show-admin .admin-only{ display:inline-block; } /* muestra en nav cuando hay sesión */
+
+#loginModal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.35); z-index:9999; }
+#loginModal.open{ display:flex; }
+.login-card{ background:#fff; border:1px solid var(--border,#e5e7eb); border-radius:14px; width:100%;
+  max-width:340px; padding:16px; box-shadow:0 10px 25px rgba(0,0,0,.15); }
+.login-card h3{ margin:0 0 8px; }
+.login-card label{ font-weight:700; display:block; margin:.5rem 0 .25rem; }
+.login-card input{ width:100%; padding:10px; border:1px solid #d1d5db; border-radius:10px; }
+.login-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+
+
 
 
