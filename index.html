@@ -14,15 +14,17 @@
       <div class="brand" style="display:flex;gap:14px;align-items:center">
         <!-- Logo centrado: usa tu archivo existente -->
         <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
-        <div>
-          <h1>Teretortas y Más</h1>
-          <nav class="note" style="color:#fff">
-            <a href="index.html" class="active">Inicio</a>
+        <!-- fila menu + botón a la derecha -->
+        <div class="navbar-row">
+          <h1>Teretortas y más</h1>
+          <nav class="note">
+            <a href="index.html" class="active"><b>Inicio</b></a>
             <a href="arma_tu_torta.html">Arma tu torta</a>
             <a href="agenda.html" class="admin-only">Agenda</a>
             <a href="inventario.html" class="admin-only">Inventario</a>
           </nav>
-          <div style="margin-top:6px">
+        
+          <div class="auth-actions">
             <button id="btnLogin" class="btn secondary">Acceder</button>
             <button id="btnLogout" class="btn secondary" style="display:none">Salir</button>
           </div>
@@ -181,6 +183,7 @@
 </script>
 
 </html>
+
 
 
 
