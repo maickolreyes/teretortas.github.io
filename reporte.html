@@ -1,6 +1,21 @@
 <!doctype html>
 <html lang="es">
 <head>
+<!-- Guard de acceso: solo administradora -->
+<script>
+(function () {
+  try {
+    var auth = JSON.parse(sessionStorage.getItem('ttm_auth') || 'null');
+    if (!(auth && auth.role === 'admin')) {
+      // Redirige si no hay sesión admin
+      location.replace('index.html');
+    }
+  } catch (e) {
+    location.replace('index.html');
+  }
+})();
+</script>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Teretortas y Más · Reporte de Inventario (Demo)</title>
@@ -94,6 +109,18 @@
     </section>
   </div>
 
+<script>
+(function () {
+  var authOk = false;
+  try {
+    var a = JSON.parse(sessionStorage.getItem('ttm_auth') || 'null');
+    authOk = !!(a && a.role === 'admin');
+  } catch (e) {}
+  if (!authOk) location.replace('index.html');
+})();
+</script>
+
+  
   <script>
     // === Config ===
     const AUTO_SEMILLA_DEMO_SI_NO_HAY_MOVS = true;
@@ -274,3 +301,4 @@
 </footer>
 </body>
 </html>
+
