@@ -127,6 +127,29 @@
   </footer>
 
   <script>
+(function(){
+  const auth = (()=>{
+    try{ return JSON.parse(sessionStorage.getItem('ttm_auth') || 'null'); }catch{ return null; }
+  })();
+  const isAdmin = !!(auth && auth.role==='admin');
+
+  // Oculta botones admin del menú si no hay sesión
+  if (!isAdmin){
+    document.querySelectorAll('.admin-only').forEach(el=> el.style.display='none');
+  } else {
+    document.body.classList.add('show-admin');
+  }
+
+  // Si la página es sensible (agenda/inventario), redirige si no es admin
+  if (!isAdmin){
+    alert('Acceso restringido. Inicia sesión como administradora.');
+    window.location.href = 'index.html';
+  }
+})();
+</script>
+
+
+  <script>
     // ------- Persistencia -------
     const LS_ITEMS = 'inv_items_v1';
     const LS_MOVS  = 'inv_movs_v1';
@@ -339,3 +362,4 @@
   </script>
 </body>
 </html>
+
