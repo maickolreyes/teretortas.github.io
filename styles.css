@@ -198,6 +198,23 @@ tr:last-child td{ border-bottom:none; }
 .login-card input{ width:100%; padding:10px; border:1px solid #d1d5db; border-radius:10px; }
 .login-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 
+/* Menú con botón a la derecha */
+.navbar-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:6px;
+}
+.navbar-row nav{ flex:1; }
+.auth-actions{ margin-left:auto; display:flex; gap:8px; }
+
+@media (max-width:680px){
+  .navbar-row{ flex-wrap:wrap; }
+  .auth-actions{ margin-left:0; }
+}
+
+
+
 
 
 
