@@ -25,22 +25,30 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="container brand">
-      <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
-      <div>
-        <h1>Arma tu torta</h1>
-        <nav class="note">
-          <a href="index.html">Inicio</a>
-          <a href="arma_tu_torta.html" class="active"><b>Arma tu torta</b></a>
-          <a href="agenda.html">Agenda</a>
-          <a href="inventario.html">Inventario</a>
-        </nav>
-        <div class="note">Configura tamaño, sabor, <b>dos rellenos</b> (opcional), cobertura y extras. Precios demo.</div>
+  <!-- HERO / MENÚ (fijo y bajo) -->
+  <header class="hero" id="hero">
+    <div class="container brand" style="width:100%;justify-content:space-between">
+      <div class="brand" style="display:flex;gap:14px;align-items:center">
+        <!-- Logo centrado: usa tu archivo existente -->
+        <div class="logo"><img src="teretortas_circle.png" alt="Teretortas y Más"/></div>
+        <!-- fila menu + botón a la derecha -->
+        <div class="navbar-row">
+          <h1>Teretortas y más</h1>
+          <nav class="note">
+            <a href="index.html" class="active"><b>Inicio</b></a>
+            <a href="arma_tu_torta.html">Arma tu torta</a>
+            <a href="agenda.html" class="admin-only">Agenda</a>
+            <a href="inventario.html" class="admin-only">Inventario</a>
+          </nav>
+        
+          <div class="auth-actions">
+            <button id="btnLogin" class="btn secondary">Acceder</button>
+            <button id="btnLogout" class="btn secondary" style="display:none">Salir</button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
-
   <main class="wrap">
     <!-- ============ 1) TAMAÑO, MARCO Y SABOR (REEMPLAZO) ============ -->
 <section id="step1" class="card" style="margin-top:8px">
@@ -862,6 +870,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
