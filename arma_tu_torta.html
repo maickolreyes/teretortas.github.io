@@ -260,6 +260,77 @@
     </div>
   </footer>
 
+
+  <script>
+(function(){
+  const KEY = 'ttm_auth'; // {role:'admin', user:'...'}
+  const $btnLogin  = document.getElementById('btnLogin');
+  const $btnLogout = document.getElementById('btnLogout');
+  const $modal = document.getElementById('loginModal');
+  const $u = document.getElementById('auth_user');
+  const $p = document.getElementById('auth_pass');
+  const $ok = document.getElementById('confirmLogin');
+  const $cancel = document.getElementById('cancelLogin');
+
+  function getAuth(){
+    try{ return JSON.parse(sessionStorage.getItem(KEY) || 'null'); }catch{ return null; }
+  }
+  function setAuth(obj){
+    sessionStorage.setItem(KEY, JSON.stringify(obj));
+  }
+  function clearAuth(){
+    sessionStorage.removeItem(KEY);
+  }
+
+  function applyUI(){
+    const auth = getAuth();
+    const isAdmin = !!(auth && auth.role === 'admin');
+    document.body.classList.toggle('show-admin', isAdmin);
+    // botones
+    $btnLogin.style.display  = isAdmin ? 'none' : 'inline-block';
+    $btnLogout.style.display = isAdmin ? 'inline-block' : 'none';
+  }
+
+  function openModal(){
+    $modal.classList.add('open');
+    setTimeout(()=> $u.focus(), 50);
+  }
+  function closeModal(){
+    $modal.classList.remove('open');
+    $u.value=''; $p.value='';
+  }
+
+  // Reglas DEMO: cámbialas si quieres
+  const DEMO_USER = 'admin';
+  const DEMO_PASS = 'teretortas';
+
+  // Eventos
+  $btnLogin.addEventListener('click', openModal);
+  $cancel.addEventListener('click', closeModal);
+  $ok.addEventListener('click', () => {
+    const user = ($u.value||'').trim();
+    const pass = ($p.value||'').trim();
+    if (user === DEMO_USER && pass === DEMO_PASS){
+      setAuth({role:'admin', user});
+      closeModal();
+      applyUI();
+    } else {
+      alert('Usuario o contraseña inválidos.');
+    }
+  });
+
+  $btnLogout.addEventListener('click', () => {
+    clearAuth();
+    applyUI();
+  });
+
+  // cerrar modal con fondo
+  $modal.addEventListener('click', (e)=>{ if (e.target === $modal) closeModal(); });
+
+  // init
+  applyUI();
+})();
+</script>
    <script>
 /* ====== Lógica básica del paso 1 (con MARCO) ====== */
 (function(){
@@ -870,6 +941,7 @@ function toISODate(d){ return d.toISOString().slice(0,10); }
   
 </body>
 </html>
+
 
 
 
